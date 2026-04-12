@@ -1,0 +1,40 @@
+# Chạy khi đổi code Flutter trong monorepo bien-vo-cuc
+name: Flutter mobile tests
+
+on:
+  push:
+    paths:
+      - 'apps/mobile/**'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+
+defaults:
+  run:
+    working-directory: apps/mobile
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests (app + bvc_ui)
+        run: |
+          flutter test test/
+          flutter test packages/bvc_ui/test/
+
+      - name: Tests (bvc_common — pure Dart)
+        working-directory: apps/mobile/packages/bvc_common
+        run: dart pub get && dart test

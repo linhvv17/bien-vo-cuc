@@ -1,0 +1,17 @@
+name: bvc_ui
+description: Shared Material theme & widgets for Biển Vô Cực
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  bvc_common:
+    path: ../bvc_common
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

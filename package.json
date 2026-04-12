@@ -1,0 +1,13 @@
+{
+  "name": "bien-vo-cuc",
+  "private": true,
+  "scripts": {
+    "dev:api": "npm run start:dev --prefix apps/api",
+    "dev:web": "npm run dev --prefix apps/web",
+    "dev:admin": "npm run dev --prefix apps/admin",
+    "dev": "concurrently -n api,web,admin -c blue,magenta,green \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:admin\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

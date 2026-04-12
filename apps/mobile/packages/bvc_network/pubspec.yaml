@@ -1,0 +1,15 @@
+name: bvc_network
+description: HTTP client, env, API response helpers for Biển Vô Cực
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.9.2
+  flutter_riverpod: ^3.3.1
+  bvc_auth:
+    path: ../bvc_auth

@@ -1,0 +1,13 @@
+name: bvc_common
+description: Shared pure Dart utilities (date, formatters)
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  timezone: ^0.10.0
+
+dev_dependencies:
+  test: ^1.25.0

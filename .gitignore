@@ -1,0 +1,56 @@
+# Tài liệu nội bộ — KHÔNG commit
+bien_vo_cuc_engineering_private.md
+cursor_prompt_bien_vo_cuc.md
+WEB_ACCESS.md
+run_demo_android.sh
+
+# Logs
+*.log
+.api.log
+
+# node_modules sai chỗ
+apps/node_modules/
+
+# Env files toàn project
+**/.env
+apps/api/.env
+**/.env.dev
+**/.env.uat
+**/.env.prod
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+**/out/
+
+# Flutter — đã có .gitignore riêng trong mobile/
+# nhưng thêm ở root để chắc
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/.metadata
+
+# Dependencies
+**/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+apps/mobile/**/*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.turbo/
+.vercel/
+.railway/

@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+  MERCHANT
+  MODERATOR
+  CONTENT_EDITOR
+}
+
+/// Phân loại tài khoản (khác với Role — quyền chi tiết).
+/// - APP_CUSTOMER: khách đăng ký qua app
+/// - PROVIDER_ACCOUNT: tài khoản NCC do admin tạo
+/// - SYSTEM_STAFF: vận hành hệ thống (admin, mod, …)
+enum UserKind {
+  APP_CUSTOMER
+  PROVIDER_ACCOUNT
+  SYSTEM_STAFF
+}
+
+enum ServiceType {
+  VEHICLE
+  TOUR
+  ACCOMMODATION
+  FOOD
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TWIN
+  FAMILY
+  DORM
+  SUITE
+  QUAD
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  phone        String?   @unique
+  name         String
+  avatar       String?
+  role         Role      @default(USER)
+  userKind     UserKind  @default(APP_CUSTOMER)
+  passwordHash String
+  providerId   String?
+  bookings     Booking[]
+  photos       Photo[]
+  provider     Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([providerId])
+}
+
+model TideSchedule {
+  id         String   @id @default(cuid())
+  date       DateTime
+  lowTime1   DateTime
+  lowHeight1 Float
+  lowTime2   DateTime?
+  lowHeight2 Float?
+  isGolden   Boolean  @default(false)
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([date])
+  @@unique([date])
+}
+
+model Service {
+  id          String      @id @default(cuid())
+  type        ServiceType
+  providerId  String?
+  name        String
+  description String
+  price       Int
+  maxCapacity Int
+  images      String[]
+  /// Địa chỉ / vị trí (ưu tiên ACCOMMODATION)
+  addressLine    String?
+  locationSummary String?
+  bookings    Booking[]
+  rooms       Room[]
+  combosAsHotel Combo[]   @relation("ComboHotel")
+  combosAsFood  Combo[]   @relation("ComboFood")
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([isActive])
+  @@index([providerId])
+}
+
+/// Phòng thuộc cơ sở lưu trú (ACCOMMODATION). Mỗi bản ghi = 1 phòng vật lý (inventory 1/đêm).
+model Room {
+  id         String   @id @default(cuid())
+  serviceId  String
+  code       String
+  name       String
+  roomType   RoomType
+  maxGuests  Int      @default(2)
+  floor      Int?
+  images     String[]
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([serviceId, code])
+  @@index([serviceId])
+  @@index([isActive])
+}
+
+model Provider {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  services  Service[]
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Combo {
+  id                   String    @id @default(cuid())
+  hotelServiceId       String
+  foodServiceId        String
+  title                String?
+  discountPercent      Int       @default(10) // 0..100
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  bookings             Booking[]
+
+  hotel Service @relation("ComboHotel", fields: [hotelServiceId], references: [id], onDelete: Restrict)
+  food  Service @relation("ComboFood", fields: [foodServiceId], references: [id], onDelete: Restrict)
+
+  @@unique([hotelServiceId, foodServiceId])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  /// Null = khách đặt qua web / kênh không tài khoản (chỉ lưu tên + SĐT trên đơn).
+  userId     String?
+  serviceId  String
+  date       DateTime
+  quantity   Int
+  totalPrice Int
+  status     BookingStatus @default(PENDING)
+  /// Lý do hủy phía NCC (mã preset: full, weather, …). Chỉ ghi khi NCC đổi sang CANCELLED.
+  merchantCancelPreset String?
+  /// Chi tiết thêm / bắt buộc khi preset = other.
+  merchantCancelDetail String?
+  customerName  String
+  customerPhone String
+  customerNote  String?
+  comboId       String?
+  bookingGroupId String?
+  /// Phòng đã gán (ACCOMMODATION). Null = không áp dụng hoặc ghi nhận sau.
+  roomId     String?
+  /// SPECIFIC | RANDOM
+  roomAssignment String?
+  /// Tiêu chí khách chọn (vd: quiet, high_floor)
+  guestPreferences String[] @default([])
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  combo   Combo?  @relation(fields: [comboId], references: [id], onDelete: SetNull)
+  room    Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([serviceId])
+  @@index([date])
+  @@index([status])
+  @@index([customerPhone])
+  @@index([comboId])
+  @@index([bookingGroupId])
+  @@index([roomId])
+}
+
+model Photo {
+  id        String      @id @default(cuid())
+  userId    String
+  url       String
+  caption   String?
+  takenAt   DateTime?
+  likeCount Int         @default(0)
+  status    PhotoStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}

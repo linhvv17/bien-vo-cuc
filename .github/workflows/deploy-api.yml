@@ -1,0 +1,17 @@
+name: Deploy API
+on:
+  push:
+    branches: [main, uat]
+    paths: ['apps/api/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Production
+        if: github.ref == 'refs/heads/main'
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_PROD }}
+      - name: Deploy UAT
+        if: github.ref == 'refs/heads/uat'
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_UAT }}
