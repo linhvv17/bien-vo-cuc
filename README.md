@@ -40,3 +40,4 @@ cd apps/mobile && flutter run
 - **API:** Prisma CLI mặc định đọc file tên `.env` — có thể `cp apps/api/.env.dev apps/api/.env` khi chạy `prisma migrate` (cả hai đều nên nằm trong `.gitignore` ở root).
 - **Web — Mapbox:** ảnh bản đồ tĩnh dùng `VITE_MAPBOX_PUBLIC_TOKEN` (public `pk.*`, khai báo trong `.env.development` local hoặc biến môi trường trên Vercel). Không hardcode token trong source (GitHub push protection).
 - **Git — `apps/admin` là submodule (có `.git` con):** xóa repo lồng nhau rồi add lại toàn bộ file: `rm -rf apps/admin/.git && git rm --cached apps/admin 2>/dev/null; git add apps/admin` rồi commit lại.
+- **Push GitHub bị chặn vì secret trong *lịch sử cũ*:** cần rewrite (ví dụ một commit gốc sạch: `git checkout --orphan tmp && git add -A && git commit -m "…" && git branch -D main && git branch -m main`), rồi `git push --force-with-lease origin main` (chỉ khi remote chưa có commit quan trọng khác).
