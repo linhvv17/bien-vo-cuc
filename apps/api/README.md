@@ -1,15 +1,38 @@
 # API (NestJS)
 
-## Prisma & file `.env`
+## Tạo tài khoản admin
 
-Prisma CLI mặc định đọc **`apps/api/.env`** (không đọc `.env.dev`).
+1. Trong **`apps/api/.env`** có `DATABASE_URL=` đúng Supabase (chuỗi copy trong Supabase).
 
-Trước khi chạy `prisma migrate dev` (hoặc lệnh Prisma cần biến môi trường), từ thư mục gốc monorepo:
+2. Chạy:
 
 ```bash
-cp apps/api/.env.dev apps/api/.env
+cd apps/api
+ADMIN_EMAIL=email-cua-ban@gmail.com ADMIN_PASSWORD='matKhauDu8KyTu' npm run create-admin
 ```
 
-File `.env` bị gitignore — không commit nhầm.
+3. Mở trang **login** của admin → đăng nhập bằng **email + mật khẩu** vừa gõ.
 
-Chạy API dev: `npm run start:dev` (dùng `apps/api/.env.dev` qua `--env-file` trong `package.json`).
+---
+
+**Hoặc** chỉ admin cho **production** (không seed triều/dịch vụ demo):
+
+```bash
+ADMIN_EMAIL=ban@gmail.com ADMIN_PASSWORD='matKhauDu8KyTu' npm run seed:production
+```
+
+**Hoặc** full demo: `npm run seed` → admin **`admin@bienvocuc.local`** / **`demo1234`**.
+
+---
+
+## File `.env` (Prisma)
+
+Prisma đọc **`apps/api/.env`**. Chưa có: `cp apps/api/.env.example apps/api/.env` rồi sửa.
+
+Chạy API local: `npm run start:dev`.
+
+## Deploy (Render)
+
+Env: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, … (xem `.env.example`).  
+Web/Admin: `NEXT_PUBLIC_API_BASE_URL` = URL API (không `localhost`).  
+Sau deploy có migration mới: `prisma migrate deploy`.

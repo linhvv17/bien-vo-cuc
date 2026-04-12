@@ -15,6 +15,7 @@ import {
 } from '../auth/ncc-username.util';
 import { CreateProviderUserDto } from '../auth/dto/create-provider-user.dto';
 import { UpdateProviderAccountDto } from '../auth/dto/update-provider-account.dto';
+import { CreateProviderDto } from './dto/create-provider.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -26,6 +27,18 @@ export class AdminUsersService {
       orderBy: { name: 'asc' },
       select: { id: true, name: true, phone: true },
     });
+  }
+
+  async createProvider(dto: CreateProviderDto) {
+    const row = await this.prisma.provider.create({
+      data: {
+        name: dto.name,
+        phone: dto.phone ?? null,
+        address: dto.address ?? null,
+      },
+      select: { id: true, name: true, phone: true },
+    });
+    return row;
   }
 
   listProviderAccounts() {

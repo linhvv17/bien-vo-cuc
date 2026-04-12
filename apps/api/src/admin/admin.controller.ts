@@ -15,6 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateProviderUserDto } from '../auth/dto/create-provider-user.dto';
 import { UpdateProviderAccountDto } from '../auth/dto/update-provider-account.dto';
+import { CreateProviderDto } from './dto/create-provider.dto';
 import { apiSuccess } from '../common/response/api-response';
 import { AdminUsersService } from './admin-users.service';
 
@@ -27,6 +28,12 @@ export class AdminController {
   @Get('providers')
   async listProviders() {
     const data = await this.adminUsers.listProviders();
+    return apiSuccess(data, 'OK');
+  }
+
+  @Post('providers')
+  async createProvider(@Body() dto: CreateProviderDto) {
+    const data = await this.adminUsers.createProvider(dto);
     return apiSuccess(data, 'OK');
   }
 

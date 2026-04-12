@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import {
   createProviderAccount,
+  createProviderForAdmin,
   deleteProviderAccount,
   listProviderAccounts,
   listProvidersForAdmin,
@@ -47,6 +48,10 @@ export default function ProviderAccountsPage() {
   const [editPassword, setEditPassword] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [newProviderName, setNewProviderName] = useState("");
+  const [newProviderPhone, setNewProviderPhone] = useState("");
+  const [creatingProvider, setCreatingProvider] = useState(false);
 
   const refreshAccounts = useCallback(async () => {
     if (!token) return;
@@ -96,6 +101,35 @@ export default function ProviderAccountsPage() {
   function closeEdit() {
     setEditing(null);
     setEditPassword("");
+  }
+
+  async function onSubmitNewProvider(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setDone(null);
+    if (!token) return;
+    const n = newProviderName.trim();
+    if (n.length < 2) {
+      setError("Nhập tên nhà cung cấp (ít nhất 2 ký tự).");
+      return;
+    }
+    setCreatingProvider(true);
+    try {
+      const row = await createProviderForAdmin(token, {
+        name: n,
+        ...(newProviderPhone.trim() ? { phone: newProviderPhone.trim() } : {}),
+      });
+      setDone(`Đã thêm nhà cung cấp «${row.name}». Giờ có thể tạo tài khoản NCC gắn với NCC này.`);
+      setNewProviderName("");
+      setNewProviderPhone("");
+      const rows = await listProvidersForAdmin(token);
+      setProviders(rows);
+      setProviderId(row.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Thêm NCC thất bại");
+    } finally {
+      setCreatingProvider(false);
+    }
   }
 
   async function onSubmitCreate(e: FormEvent) {
@@ -199,11 +233,51 @@ export default function ProviderAccountsPage() {
       <div>
         <h1 className="text-lg font-semibold text-white">Tài khoản nhà cung cấp</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Khách hàng đăng ký qua app (APP_CUSTOMER). Tài khoản web NCC do admin tạo tại đây — chỉ cần{" "}
-          <strong>tên đăng nhập</strong> và mật khẩu (không bắt buộc email). Có thể sửa / xóa trong bảng
-          bên dưới.
+          Khách hàng đăng ký qua app (APP_CUSTOMER). Mỗi tài khoản đăng nhập NCC phải gắn với một{" "}
+          <strong>bản ghi nhà cung cấp</strong> (tên homestay, quán ăn, …). Trên DB mới (production) chưa
+          có NCC nào — thêm nhà cung cấp ở form bên dưới trước, rồi mới tạo tài khoản.
         </p>
       </div>
+
+      <form
+        onSubmit={onSubmitNewProvider}
+        className="space-y-3 rounded-xl border border-amber-500/20 bg-amber-950/20 p-4"
+      >
+        <p className="text-xs font-medium text-amber-200/90">1. Thêm nhà cung cấp (NCC)</p>
+        <p className="text-xs text-zinc-500">
+          Chưa có dữ liệu demo như môi trường dev — cần ít nhất một bản ghi ở đây thì dropdown «Nhà cung
+          cấp» mới chọn được.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-zinc-400">Tên nhà cung cấp</label>
+            <input
+              value={newProviderName}
+              onChange={(e) => setNewProviderName(e.target.value)}
+              className="mt-1 w-full rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-sky-500/60"
+              placeholder="VD: Homestay Biển Vô Cực"
+              minLength={2}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400">Số điện thoại (tuỳ chọn)</label>
+            <input
+              value={newProviderPhone}
+              onChange={(e) => setNewProviderPhone(e.target.value)}
+              className="mt-1 w-full rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-sky-500/60"
+              placeholder="090…"
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={creatingProvider}
+          className="rounded-md border border-amber-500/40 bg-amber-900/40 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-900/60 disabled:opacity-50"
+        >
+          {creatingProvider ? "Đang thêm…" : "Thêm nhà cung cấp"}
+        </button>
+      </form>
 
       {!loading ? (
         <div className="rounded-xl border border-white/10 bg-zinc-900/40 overflow-hidden">
@@ -263,7 +337,7 @@ export default function ProviderAccountsPage() {
         onSubmit={onSubmitCreate}
         className="space-y-4 rounded-xl border border-white/10 bg-zinc-900/40 p-4"
       >
-        <p className="text-xs font-medium text-zinc-400">Tạo tài khoản mới</p>
+        <p className="text-xs font-medium text-zinc-400">2. Tạo tài khoản đăng nhập NCC</p>
         <div>
           <label className="block text-xs text-zinc-400">Nhà cung cấp</label>
           <select

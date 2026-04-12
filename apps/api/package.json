@@ -19,6 +19,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "prisma db seed",
+    "seed:production": "ts-node prisma/seed-production.ts",
+    "create-admin": "ts-node scripts/create-admin.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

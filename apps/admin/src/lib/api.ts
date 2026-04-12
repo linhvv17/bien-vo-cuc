@@ -129,6 +129,17 @@ export async function listProvidersForAdmin(token: string): Promise<ProviderRow[
   return res.data;
 }
 
+export async function createProviderForAdmin(
+  token: string,
+  body: { name: string; phone?: string; address?: string },
+): Promise<ProviderRow> {
+  const res = await apiAuth<ProviderRow>("/admin/providers", token, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return res.data;
+}
+
 export type ProviderAccountRow = {
   id: string;
   username: string;
