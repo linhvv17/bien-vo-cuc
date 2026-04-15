@@ -125,13 +125,25 @@ export class WeatherService {
 
       const out = daily.time.map((t: string, i: number) => {
         const weatherCode = daily.weather_code?.[i] ?? null;
+        const tempMaxC = daily.temperature_2m_max?.[i] ?? null;
+        const tempMinC = daily.temperature_2m_min?.[i] ?? null;
+        const precipitationMm = daily.precipitation_sum?.[i] ?? null;
+        const windMaxKmh = daily.wind_speed_10m_max?.[i] ?? null;
+        const humidityPct = daily.relative_humidity_2m_max?.[i] ?? null;
+
+        // NOTE: Mobile app currently expects `tempMin/tempMax/precipitationSum/windSpeedMax`.
+        // Keep both naming styles for backwards/forwards compatibility.
         return {
           date: t,
-          tempMaxC: daily.temperature_2m_max?.[i] ?? null,
-          tempMinC: daily.temperature_2m_min?.[i] ?? null,
-          precipitationMm: daily.precipitation_sum?.[i] ?? null,
-          windMaxKmh: daily.wind_speed_10m_max?.[i] ?? null,
-          humidityPct: daily.relative_humidity_2m_max?.[i] ?? null,
+          tempMaxC: tempMaxC,
+          tempMinC: tempMinC,
+          precipitationMm: precipitationMm,
+          windMaxKmh: windMaxKmh,
+          humidityPct: humidityPct,
+          tempMax: tempMaxC,
+          tempMin: tempMinC,
+          precipitationSum: precipitationMm,
+          windSpeedMax: windMaxKmh,
           weatherCode: weatherCode != null ? Number(weatherCode) : null,
           icon: wmoCodeToIcon(weatherCode != null ? Number(weatherCode) : null),
           sunrise: daily.sunrise?.[i] ?? null,

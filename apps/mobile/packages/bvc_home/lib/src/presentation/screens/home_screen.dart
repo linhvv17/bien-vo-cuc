@@ -96,6 +96,14 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           _SectionTitle(icon: Icons.star_rounded, label: 'Hôm nay (ưu tiên)'),
                           const SizedBox(height: 8),
+                          if (data.weather7.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 8),
+                              child: _EmptyHint(
+                                text:
+                                    'Thời tiết đang tạm không có dữ liệu (có thể do upstream giới hạn). Bạn vẫn xem được lịch triều; thử tải lại sau.',
+                              ),
+                            ),
                           if (tideToday == null && weatherToday == null)
                             const _EmptyHint(text: 'Chưa có dữ liệu hôm nay. Kiểm tra backend / sync triều.')
                           else

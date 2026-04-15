@@ -28,21 +28,33 @@ class HomeRepositoryImpl implements HomeRepository {
     final ymdFrom = ymdToday;
     final ymdTo = ymdAddCalendarDays(ymdToday, 6);
 
-    final tideToday = _network.get<Map<String, dynamic>>('/tides', queryParameters: {'date': ymdToday});
-    final tideRange = _network.get<Map<String, dynamic>>(
+    final tideTodayFut =
+        _network.get<Map<String, dynamic>>('/tides', queryParameters: {'date': ymdToday});
+    final tideRangeFut = _network.get<Map<String, dynamic>>(
       '/tides/range',
       queryParameters: {'from': ymdFrom, 'to': ymdTo},
     );
-    final golden = _network.get<Map<String, dynamic>>(
+    final goldenFut = _network.get<Map<String, dynamic>>(
       '/tides/golden-hours',
       queryParameters: {'from': ymdFrom, 'to': ymdTo},
     );
-    final weather = _network.get<Map<String, dynamic>>(
+    final weatherFut = _network.get<Map<String, dynamic>>(
       '/weather/forecast',
       queryParameters: {'lat': kBeachLat, 'lon': kBeachLng},
     );
 
-    final results = await Future.wait([tideToday, tideRange, golden, weather]);
+    // Weather có thể bị upstream rate-limit (429). Không nên làm "sập" toàn Home;
+    // vẫn render triều/golden-hours, còn weather để rỗng và có thể refresh sau.
+    final results = await Future.wait(
+      [tideTodayFut, tideRangeFut, goldenFut],
+    );
+    Map<String, dynamic>? weatherRaw;
+    try {
+      final w = await weatherFut;
+      if (w.data is Map<String, dynamic>) weatherRaw = (w.data as Map<String, dynamic>);
+    } catch (_) {
+      weatherRaw = null;
+    }
 
     TideSchedule? todayParsed;
     final r0 = results[0].data;
@@ -80,7 +92,7 @@ class HomeRepositoryImpl implements HomeRepository {
       todayTide: todayParsed,
       tides7: parseTideList(results[1].data),
       golden7: parseTideList(results[2].data),
-      weather7: parseWeatherList(results[3].data),
+      weather7: parseWeatherList(weatherRaw),
     );
   }
 }
