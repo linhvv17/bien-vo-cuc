@@ -1,8 +1,8 @@
 import {
   Injectable,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
-  ServiceUnavailableException,
-  TooManyRequestsException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -97,7 +97,10 @@ export class WeatherService {
           // If upstream rate-limits us, try to serve stale-ish data.
           const stale = this.getCached(lat, lon);
           if (stale != null) return stale;
-          throw new TooManyRequestsException('Weather upstream đang giới hạn (429). Vui lòng thử lại sau.');
+          throw new HttpException(
+            'Weather upstream đang giới hạn (429). Vui lòng thử lại sau.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
         }
         throw new InternalServerErrorException(
           `Weather upstream error: ${res.status} ${res.statusText}`.trim(),
@@ -139,8 +142,7 @@ export class WeatherService {
       return out;
     } catch (e) {
       if (e instanceof InternalServerErrorException) throw e;
-      if (e instanceof TooManyRequestsException) throw e;
-      if (e instanceof ServiceUnavailableException) throw e;
+      if (e instanceof HttpException) throw e;
       throw new InternalServerErrorException(
         `Weather request failed: ${e instanceof Error ? e.message : String(e)}`,
       );
