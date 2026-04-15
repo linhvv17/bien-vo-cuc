@@ -18,4 +18,13 @@ export interface WeatherForecastDay {
   sunrise: string | null;
   /** Mặt trời lặn */
   sunset: string | null;
+
+  /**
+   * Aliases for mobile/web clients that still expect legacy field names.
+   * Keep them optional to avoid breaking strict typing.
+   */
+  tempMax?: number | null;
+  tempMin?: number | null;
+  precipitationSum?: number | null;
+  windSpeedMax?: number | null;
 }
