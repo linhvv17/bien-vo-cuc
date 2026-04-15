@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { WeatherForecastDay } from './weather-forecast.types';
@@ -38,41 +38,56 @@ export class WeatherService {
     url.searchParams.set('timezone', 'Asia/Ho_Chi_Minh');
     url.searchParams.set('forecast_days', '7');
 
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Weather upstream error: ${res.status}`);
-    }
-    const json = (await res.json()) as {
-      daily?: {
-        time?: string[];
-        temperature_2m_max?: (number | null)[];
-        temperature_2m_min?: (number | null)[];
-        precipitation_sum?: (number | null)[];
-        weather_code?: (number | null)[];
-        wind_speed_10m_max?: (number | null)[];
-        relative_humidity_2m_max?: (number | null)[];
-        sunrise?: (string | null)[];
-        sunset?: (string | null)[];
+    try {
+      const f = globalThis.fetch;
+      if (typeof f !== 'function') {
+        throw new InternalServerErrorException(
+          'Weather fetch() không khả dụng trên runtime hiện tại. Hãy đảm bảo Render dùng Node >= 18 (hoặc thêm polyfill fetch).',
+        );
+      }
+      const res = await f(url);
+      if (!res.ok) {
+        throw new InternalServerErrorException(
+          `Weather upstream error: ${res.status} ${res.statusText}`.trim(),
+        );
+      }
+      const json = (await res.json()) as {
+        daily?: {
+          time?: string[];
+          temperature_2m_max?: (number | null)[];
+          temperature_2m_min?: (number | null)[];
+          precipitation_sum?: (number | null)[];
+          weather_code?: (number | null)[];
+          wind_speed_10m_max?: (number | null)[];
+          relative_humidity_2m_max?: (number | null)[];
+          sunrise?: (string | null)[];
+          sunset?: (string | null)[];
+        };
       };
-    };
 
-    const daily = json?.daily;
-    if (!daily?.time || !Array.isArray(daily.time)) return [];
+      const daily = json?.daily;
+      if (!daily?.time || !Array.isArray(daily.time)) return [];
 
-    return daily.time.map((t: string, i: number) => {
-      const weatherCode = daily.weather_code?.[i] ?? null;
-      return {
-        date: t,
-        tempMaxC: daily.temperature_2m_max?.[i] ?? null,
-        tempMinC: daily.temperature_2m_min?.[i] ?? null,
-        precipitationMm: daily.precipitation_sum?.[i] ?? null,
-        windMaxKmh: daily.wind_speed_10m_max?.[i] ?? null,
-        humidityPct: daily.relative_humidity_2m_max?.[i] ?? null,
-        weatherCode: weatherCode != null ? Number(weatherCode) : null,
-        icon: wmoCodeToIcon(weatherCode != null ? Number(weatherCode) : null),
-        sunrise: daily.sunrise?.[i] ?? null,
-        sunset: daily.sunset?.[i] ?? null,
-      } satisfies WeatherForecastDay;
-    });
+      return daily.time.map((t: string, i: number) => {
+        const weatherCode = daily.weather_code?.[i] ?? null;
+        return {
+          date: t,
+          tempMaxC: daily.temperature_2m_max?.[i] ?? null,
+          tempMinC: daily.temperature_2m_min?.[i] ?? null,
+          precipitationMm: daily.precipitation_sum?.[i] ?? null,
+          windMaxKmh: daily.wind_speed_10m_max?.[i] ?? null,
+          humidityPct: daily.relative_humidity_2m_max?.[i] ?? null,
+          weatherCode: weatherCode != null ? Number(weatherCode) : null,
+          icon: wmoCodeToIcon(weatherCode != null ? Number(weatherCode) : null),
+          sunrise: daily.sunrise?.[i] ?? null,
+          sunset: daily.sunset?.[i] ?? null,
+        } satisfies WeatherForecastDay;
+      });
+    } catch (e) {
+      if (e instanceof InternalServerErrorException) throw e;
+      throw new InternalServerErrorException(
+        `Weather request failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 }
