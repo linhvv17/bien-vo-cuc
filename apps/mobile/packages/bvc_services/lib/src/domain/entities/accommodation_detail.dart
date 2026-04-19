@@ -166,6 +166,7 @@ class RoomItem {
     required this.images,
     required this.available,
     required this.availableCount,
+    this.pricePerNight,
   });
 
   final String id;
@@ -177,6 +178,8 @@ class RoomItem {
   final List<String> images;
   final bool available;
   final int availableCount;
+  /// Giá/đêm hiển thị (đã gộp giá phòng hoặc giá cơ sở).
+  final int? pricePerNight;
 
   factory RoomItem.fromJson(Map<String, dynamic> json) {
     final raw = json['images'];
@@ -196,6 +199,7 @@ class RoomItem {
       images: imgs,
       available: json['available'] == true,
       availableCount: (json['availableCount'] as num?)?.toInt() ?? 0,
+      pricePerNight: (json['pricePerNight'] as num?)?.toInt(),
     );
   }
 }

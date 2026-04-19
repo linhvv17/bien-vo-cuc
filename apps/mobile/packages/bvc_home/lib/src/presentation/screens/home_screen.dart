@@ -17,13 +17,17 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(homeDataProvider);
-    final baseUrl = ref.watch(apiBaseUrlProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Biển Vô Cực'),
-        centerTitle: true,
+        centerTitle: false,
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          tooltip: 'Vị trí',
+          onPressed: () {},
+          icon: const Icon(Icons.place_rounded),
+        ),
         actions: [
           IconButton(
             tooltip: 'Tải lại',
@@ -36,10 +40,9 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const Positioned.fill(child: WavesBackground()),
           async.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _ErrorPane(
+            loading: () => const _HomeSkeleton(),
+            error: (e, _) => _FullErrorState(
               message: formatDioError(e),
-              baseUrl: baseUrl,
               onRetry: () => ref.invalidate(homeDataProvider),
             ),
             data: (data) => RefreshIndicator(
@@ -50,12 +53,9 @@ class HomeScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 children: [
-                  _ApiHintCard(baseUrl: baseUrl),
-                  const SizedBox(height: 16),
                   Builder(
                     builder: (context) {
                       final todayYmd = ymdVietnamToday();
-                      final tomorrowYmd = ymdAddCalendarDays(todayYmd, 1);
 
                       TideSchedule? tideToday = data.todayTide;
                       if (tideToday == null) {
@@ -67,22 +67,6 @@ class HomeScreen extends ConsumerWidget {
                         }
                       }
 
-                      TideSchedule? tideTomorrow;
-                      for (final t in data.tides7) {
-                        if (ymd(t.date) == tomorrowYmd) {
-                          tideTomorrow = t;
-                          break;
-                        }
-                      }
-
-                      WeatherDay? weatherTomorrow;
-                      for (final w in data.weather7) {
-                        if (w.date == tomorrowYmd) {
-                          weatherTomorrow = w;
-                          break;
-                        }
-                      }
-
                       WeatherDay? weatherToday;
                       for (final w in data.weather7) {
                         if (w.date == todayYmd) {
@@ -91,87 +75,58 @@ class HomeScreen extends ConsumerWidget {
                         }
                       }
 
+                      final showWeatherBanner = data.weather7.isEmpty;
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _SectionTitle(icon: Icons.star_rounded, label: 'Hôm nay (ưu tiên)'),
-                          const SizedBox(height: 8),
-                          if (data.weather7.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 8),
-                              child: _EmptyHint(
-                                text:
-                                    'Thời tiết đang tạm không có dữ liệu (có thể do upstream giới hạn). Bạn vẫn xem được lịch triều; thử tải lại sau.',
-                              ),
-                            ),
-                          if (tideToday == null && weatherToday == null)
-                            const _EmptyHint(text: 'Chưa có dữ liệu hôm nay. Kiểm tra backend / sync triều.')
-                          else
-                            TomorrowHighlightCard(
-                              weather: weatherToday,
-                              tide: tideToday,
-                            ),
-                          const SizedBox(height: 8),
-                          if (tideToday == null && weatherToday == null)
-                            const SizedBox.shrink()
-                          else
-                            Text(
-                              'Go score = “đi săn bình minh”: triều + mưa + gió + dông (MVP).',
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
-                            ),
-                          const SizedBox(height: 12),
-                          _SectionTitle(icon: Icons.wb_twilight_rounded, label: 'Ngày mai (chuẩn bị sớm)'),
-                          const SizedBox(height: 8),
-                          if (tideTomorrow == null && weatherTomorrow == null)
-                            const _EmptyHint(text: 'Chưa có dữ liệu ngày mai.')
-                          else
-                            TomorrowHighlightCard(
-                              weather: weatherTomorrow,
-                              tide: tideTomorrow,
-                            ),
-                          const SizedBox(height: 16),
-                          _SectionTitle(icon: Icons.calendar_view_week_rounded, label: '7 ngày (từ hôm nay)'),
-                          const SizedBox(height: 8),
-                          SevenDaysSection(
-                            tides: data.tides7,
-                            weather: data.weather7,
-                          ),
-                          const SizedBox(height: 16),
-                          _SectionTitle(icon: Icons.bolt_rounded, label: 'Đặt nhanh'),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: _QuickCard(
-                              title: 'Ăn & Ở',
-                              subtitle: 'Khách sạn • món ăn • combo',
-                              icon: Icons.storefront_rounded,
-                              colors: const [Color(0x334A90C4), Color(0x221A2D3E)],
-                              onTap: () => context.go('/services'),
-                            ),
-                          ),
+                          // Ưu tiên thẻ "Hôm nay" để người dùng thấy ngay giá trị app (triều + gợi ý Go).
+                          if (tideToday != null || weatherToday != null) ...[
+                            TomorrowHighlightCard(weather: weatherToday, tide: tideToday),
+                            const SizedBox(height: 14),
+                          ] else ...[
+                            const _InlineHint(text: 'Chưa có dữ liệu hôm nay.'),
+                            const SizedBox(height: 14),
+                          ],
+                          if (showWeatherBanner) ...[
+                            const _WeatherPartialBanner(),
+                            const SizedBox(height: 14),
+                          ],
+                          const _SectionLabel(text: 'DỊCH VỤ NHANH'),
                           const SizedBox(height: 10),
                           Row(
                             children: [
                               Expanded(
-                                child: _QuickCard(
-                                  title: 'Xe xích',
-                                  subtitle: 'Không lội bùn 1–3km',
+                                child: _QuickSquare(
+                                  icon: Icons.restaurant_rounded,
+                                  label: 'Ăn & Ở',
+                                  onTap: () => context.go('/services'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _QuickSquare(
                                   icon: Icons.directions_car_rounded,
-                                  colors: const [Color(0x334A90C4), Color(0x221A2D3E)],
+                                  label: 'Xe xích',
                                   onTap: () => context.go('/book/vehicle'),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: _QuickCard(
-                                  title: 'Chụp ảnh + Flycam',
-                                  subtitle: 'Ekip hỗ trợ pose',
+                                child: _QuickSquare(
                                   icon: Icons.photo_camera_rounded,
-                                  colors: const [Color(0x33E8834A), Color(0x221A2D3E)],
+                                  label: 'Chụp ảnh',
                                   onTap: () => context.go('/book/photo'),
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 18),
+                          const _SectionLabel(text: '7 NGÀY TỚI'),
+                          const SizedBox(height: 10),
+                          SevenDaysSection(
+                            tides: data.tides7,
+                            weather: data.weather7,
                           ),
                         ],
                       );
@@ -187,137 +142,174 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.text});
+  final String text;
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Text(label, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-      ],
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.8,
+        color: AppColors.mutedForeground,
+      ),
     );
   }
 }
 
-class _ApiHintCard extends StatelessWidget {
-  const _ApiHintCard({required this.baseUrl});
-
-  final String baseUrl;
+class _QuickSquare extends StatelessWidget {
+  const _QuickSquare({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white.withValues(alpha: 0.04),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(
-          'API: $baseUrl',
-          style: const TextStyle(color: Color(0xFFA0B4C8), fontSize: 12),
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: Ink(
+          height: 76,
+          decoration: BoxDecoration(
+            color: AppColors.card.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: cs.primary),
+              const SizedBox(height: 8),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.text});
-
-  final String text;
-
+class _WeatherPartialBanner extends StatelessWidget {
+  const _WeatherPartialBanner();
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white.withValues(alpha: 0.04),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: AppColors.destructive.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        border: Border.all(color: AppColors.destructive.withValues(alpha: 0.35)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(text, style: const TextStyle(color: Color(0xFFA0B4C8))),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_rounded, color: AppColors.destructive),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Thời tiết tạm không có', style: TextStyle(fontWeight: FontWeight.w900)),
+                SizedBox(height: 2),
+                Text(
+                  'Dữ liệu thời tiết đang được cập nhật. Thông tin triều vẫn chính xác.',
+                  style: TextStyle(color: AppColors.mutedForeground, height: 1.25),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ErrorPane extends StatelessWidget {
-  const _ErrorPane({required this.message, required this.baseUrl, required this.onRetry});
+class _InlineHint extends StatelessWidget {
+  const _InlineHint({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.card.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
+      ),
+      child: Text(text, style: const TextStyle(color: AppColors.mutedForeground)),
+    );
+  }
+}
 
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    Widget box({double? h, double? w, BorderRadius? r}) => Container(
+          height: h,
+          width: w,
+          decoration: BoxDecoration(
+            color: AppColors.muted.withValues(alpha: 0.55),
+            borderRadius: r ?? BorderRadius.circular(AppRadii.xl),
+          ),
+        );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      children: [
+        box(h: 200, r: BorderRadius.circular(AppRadii.x2l)),
+        const SizedBox(height: 16),
+        box(h: 18, w: 140, r: BorderRadius.circular(8)),
+        const SizedBox(height: 10),
+        Row(children: [Expanded(child: box(h: 76)), const SizedBox(width: 10), Expanded(child: box(h: 76)), const SizedBox(width: 10), Expanded(child: box(h: 76))]),
+        const SizedBox(height: 18),
+        box(h: 18, w: 120, r: BorderRadius.circular(8)),
+        const SizedBox(height: 10),
+        Row(children: List.generate(5, (i) => Expanded(child: Padding(padding: EdgeInsets.only(right: i == 4 ? 0 : 10), child: box(h: 70))))),
+        const SizedBox(height: 18),
+        const Center(child: Text('Đang tải dữ liệu...', style: TextStyle(color: AppColors.mutedForeground))),
+      ],
+    );
+  }
+}
+
+class _FullErrorState extends StatelessWidget {
+  const _FullErrorState({required this.message, required this.onRetry});
   final String message;
-  final String baseUrl;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final isOffline = message.toLowerCase().contains('không kết nối') || message.toLowerCase().contains('mạng');
+    final title = isOffline ? 'Mất kết nối mạng' : 'Hệ thống đang bận';
+    final desc = isOffline
+        ? 'Vui lòng kiểm tra kết nối internet và thử lại.'
+        : 'Chúng tôi đang xử lý, vui lòng thử lại sau ít phút.';
+    final icon = isOffline ? Icons.wifi_off_rounded : Icons.error_rounded;
+    final iconBg = isOffline ? AppColors.destructive.withValues(alpha: 0.18) : AppColors.destructive.withValues(alpha: 0.18);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message, textAlign: TextAlign.center),
+            Container(
+              height: 72,
+              width: 72,
+              decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+              child: Icon(icon, color: AppColors.destructive, size: 34),
+            ),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
             const SizedBox(height: 8),
-            Text('API: $baseUrl', style: const TextStyle(color: Color(0xFFA0B4C8), fontSize: 12)),
+            Text(desc, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.mutedForeground, height: 1.3)),
             const SizedBox(height: 16),
             FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Thử lại')),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickCard extends StatelessWidget {
-  const _QuickCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.colors,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final List<Color> colors;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: Colors.white.withValues(alpha: 0.92)),
-                const SizedBox(height: 8),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Color(0xFFA0B4C8), fontSize: 12)),
-              ],
-            ),
-          ),
         ),
       ),
     );

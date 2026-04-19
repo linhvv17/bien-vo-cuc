@@ -124,6 +124,8 @@ model Room {
   roomType   RoomType
   maxGuests  Int      @default(2)
   floor      Int?
+  /// Giá/đêm cho phòng này. Null = dùng giá cơ sở [Service.price].
+  pricePerNight Int?
   images     String[]
   sortOrder  Int      @default(0)
   isActive   Boolean  @default(true)

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_network/bvc_network.dart';
@@ -274,8 +275,149 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
     );
   }
 
+  Widget _accommodationEntry(BuildContext context) {
+    final async = ref.watch(servicesByTypeProvider('ACCOMMODATION'));
+    return Stack(
+      children: [
+        const Positioned.fill(child: WavesBackground()),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            title: Text(widget.title),
+            centerTitle: true,
+          ),
+          body: async.when(
+            loading: () => const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFF4A90C4)),
+                  SizedBox(height: 16),
+                  Text('Đang tải…', style: TextStyle(color: _kMuted)),
+                ],
+              ),
+            ),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('$e', textAlign: TextAlign.center, style: const TextStyle(color: _kMuted)),
+              ),
+            ),
+            data: (items) {
+              if (widget.serviceId != null) {
+                final id = widget.serviceId!;
+                final exists = items.any((x) => x.id == id);
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  children: [
+                    Text(
+                      exists ? (widget.serviceName ?? 'Cơ sở lưu trú') : 'Không tìm thấy dịch vụ',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Đặt theo loại phòng và số phòng còn trống trong ngày — giống app đặt phòng thông dụng.',
+                      style: TextStyle(color: _kMuted, height: 1.4),
+                    ),
+                    const SizedBox(height: 20),
+                    if (exists) ...[
+                      FilledButton(
+                        onPressed: () => context.push('/book/accommodation/$id?date=${Uri.encodeComponent(_dateYmd)}'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          backgroundColor: _accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text('Đặt phòng (chọn loại phòng)', style: TextStyle(fontWeight: FontWeight.w800)),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => context.push('/services/accommodation/$id'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          foregroundColor: _accent,
+                          side: BorderSide(color: _accent.withValues(alpha: 0.5)),
+                        ),
+                        child: const Text('Xem chi tiết & ảnh'),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              if (items.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Chưa có cơ sở lưu trú.', textAlign: TextAlign.center, style: TextStyle(color: _kMuted)),
+                  ),
+                );
+              }
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                children: [
+                  const Text('Chọn cơ sở', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Mỗi nơi có các loại phòng (đơn, đôi, gia đình…) và giá theo phòng/đêm. Bạn chọn ngày và số phòng ở bước sau.',
+                    style: TextStyle(color: _kMuted, height: 1.35),
+                  ),
+                  const SizedBox(height: 16),
+                  ...items.map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => context.push('/services/accommodation/${s.id}'),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Ink(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.white.withValues(alpha: 0.05),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(s.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Từ ${formatVnd(s.price)}/đêm',
+                                        style: TextStyle(color: _accent.withValues(alpha: 0.95), fontWeight: FontWeight.w700),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right_rounded, color: _accent.withValues(alpha: 0.9)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.type == 'ACCOMMODATION') {
+      return _accommodationEntry(context);
+    }
+
     Widget body(AsyncValue<List<ServiceItem>> async) {
       return async.when(
         loading: () => const Center(

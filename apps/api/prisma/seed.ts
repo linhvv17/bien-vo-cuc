@@ -175,15 +175,15 @@ async function main() {
     'https://images.unsplash.com/photo-1631049307264-da0ec9ad7038?w=600&q=80';
   /** Nhiều phòng cùng loại để app demo: còn trống / đặt đoàn (2 đơn + 1 đôi + …). */
   const roomsAc1 = [
-    { code: '101', name: 'Phòng đơn view vườn', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 1 },
-    { code: '103', name: 'Phòng đơn góc yên tĩnh', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 2 },
-    { code: '104', name: 'Phòng đơn tầng 1', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 3 },
-    { code: '102', name: 'Phòng đôi giường Queen', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 4 },
-    { code: '105', name: 'Phòng đôi ban công', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 5 },
-    { code: '106', name: 'Phòng đôi cửa sổ lớn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 6 },
-    { code: '107', name: 'Phòng đôi tiêu chuẩn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 7 },
-    { code: '201', name: 'Phòng gia đình 2 giường', roomType: 'FAMILY' as const, maxGuests: 4, floor: 2, sortOrder: 8 },
-    { code: '202', name: 'Phòng gia đình gầm mái', roomType: 'FAMILY' as const, maxGuests: 4, floor: 3, sortOrder: 9 },
+    { code: '101', name: 'Phòng đơn view vườn', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 1, pricePerNight: 320_000 },
+    { code: '103', name: 'Phòng đơn góc yên tĩnh', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 2, pricePerNight: 310_000 },
+    { code: '104', name: 'Phòng đơn tầng 1', roomType: 'SINGLE' as const, maxGuests: 1, floor: 1, sortOrder: 3, pricePerNight: 300_000 },
+    { code: '102', name: 'Phòng đôi giường Queen', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 4, pricePerNight: 380_000 },
+    { code: '105', name: 'Phòng đôi ban công', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 5, pricePerNight: 400_000 },
+    { code: '106', name: 'Phòng đôi cửa sổ lớn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 6, pricePerNight: 390_000 },
+    { code: '107', name: 'Phòng đôi tiêu chuẩn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 7, pricePerNight: 370_000 },
+    { code: '201', name: 'Phòng gia đình 2 giường', roomType: 'FAMILY' as const, maxGuests: 4, floor: 2, sortOrder: 8, pricePerNight: 520_000 },
+    { code: '202', name: 'Phòng gia đình gầm mái', roomType: 'FAMILY' as const, maxGuests: 4, floor: 3, sortOrder: 9, pricePerNight: 540_000 },
   ];
   for (const r of roomsAc1) {
     await prisma.room.upsert({
@@ -195,6 +195,7 @@ async function main() {
         floor: r.floor,
         sortOrder: r.sortOrder,
         images: [imgRoom],
+        pricePerNight: r.pricePerNight,
       },
       create: {
         serviceId: 'seed-accom-1',
@@ -205,16 +206,17 @@ async function main() {
         floor: r.floor,
         sortOrder: r.sortOrder,
         images: [imgRoom],
+        pricePerNight: r.pricePerNight,
       },
     });
   }
 
   const roomsAc2 = [
-    { code: 'A1', name: 'Phòng đôi tiêu chuẩn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 1 },
-    { code: 'B1', name: 'Phòng đôi gần cầu thang', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 2 },
-    { code: 'B2', name: 'Phòng đôi cuối hành lang', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 3 },
-    { code: 'A2', name: 'Phòng 2 giường đơn', roomType: 'TWIN' as const, maxGuests: 2, floor: 1, sortOrder: 4 },
-    { code: 'C1', name: 'Phòng 2 giường đơn sáng', roomType: 'TWIN' as const, maxGuests: 2, floor: 2, sortOrder: 5 },
+    { code: 'A1', name: 'Phòng đôi tiêu chuẩn', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 1, pricePerNight: 260_000 },
+    { code: 'B1', name: 'Phòng đôi gần cầu thang', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 1, sortOrder: 2, pricePerNight: 250_000 },
+    { code: 'B2', name: 'Phòng đôi cuối hành lang', roomType: 'DOUBLE' as const, maxGuests: 2, floor: 2, sortOrder: 3, pricePerNight: 250_000 },
+    { code: 'A2', name: 'Phòng 2 giường đơn', roomType: 'TWIN' as const, maxGuests: 2, floor: 1, sortOrder: 4, pricePerNight: 240_000 },
+    { code: 'C1', name: 'Phòng 2 giường đơn sáng', roomType: 'TWIN' as const, maxGuests: 2, floor: 2, sortOrder: 5, pricePerNight: 255_000 },
   ];
   for (const r of roomsAc2) {
     await prisma.room.upsert({
@@ -226,6 +228,7 @@ async function main() {
         floor: r.floor,
         sortOrder: r.sortOrder,
         images: [imgRoom],
+        pricePerNight: r.pricePerNight,
       },
       create: {
         serviceId: 'seed-accom-2',
@@ -236,6 +239,7 @@ async function main() {
         floor: r.floor,
         sortOrder: r.sortOrder,
         images: [imgRoom],
+        pricePerNight: r.pricePerNight,
       },
     });
   }

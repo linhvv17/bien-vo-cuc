@@ -9,6 +9,10 @@ const Color _kMuted = Color(0xFFA0B4C8);
 const Color _kGold = Color(0xFFF2C94C);
 const Color _kBlue = Color(0xFF4A90C4);
 
+/// Kích thước cố định cho mỗi ô trong thanh 7 ngày (tránh lệch do border/badge).
+const double _kDayChipWidth = 104;
+const double _kDayChipHeight = 166;
+
 /// Lịch 7 ngày: triều + thời tiết, điểm Go score, làm nổi bật ngày đẹp để gợi ý lên kế hoạch.
 class SevenDaysSection extends StatelessWidget {
   const SevenDaysSection({super.key, required this.tides, required this.weather});
@@ -60,9 +64,19 @@ class SevenDaysSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Điểm Go càng cao = triều và thời tiết càng thuận để ra biển / săn bình minh. Ngày có viền sáng là ngày đẹp nhất trong tuần.',
-          style: TextStyle(color: _kMuted, fontSize: 12.5, height: 1.4),
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Điểm trên mỗi thẻ là gợi ý nhanh từ triều và thời tiết trong ngày (thang 0–100). Điểm càng cao thì càng thuận để ra bãi và canh bình minh.',
+              style: TextStyle(color: _kMuted, fontSize: 12.5, height: 1.45),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Màu và dòng chữ trên thẻ trùng với từng mức ở bảng chú thích ngay bên dưới.',
+              style: TextStyle(color: _kMuted, fontSize: 12, height: 1.4),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         SizedBox(
@@ -70,20 +84,24 @@ class SevenDaysSection extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 10),
             child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            clipBehavior: Clip.none,
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, i) {
-              final r = rows[i];
-              final isWeekPeak = i == firstMaxIndex && r.go.score == maxScore && maxScore >= 52;
-              return _DayChip(
-                row: r,
-                isWeekPeak: isWeekPeak,
-              );
-            },
-          ),
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final r = rows[i];
+                final isWeekPeak = i == firstMaxIndex && r.go.score == maxScore && maxScore >= 52;
+                return SizedBox(
+                  width: _kDayChipWidth,
+                  height: _kDayChipHeight,
+                  child: _DayChip(
+                    row: r,
+                    isWeekPeak: isWeekPeak,
+                  ),
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -126,122 +144,126 @@ class _DayChip extends StatelessWidget {
     final good = row.go.score >= 70;
     final ok = row.go.score >= 45 && row.go.score < 70;
 
-    return SizedBox(
-      width: 108,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                colors: good
-                    ? [accent.withValues(alpha: 0.35), const Color(0xFF1A2D3E)]
-                    : ok
-                        ? [accent.withValues(alpha: 0.22), const Color(0xFF1A2D3E)]
-                        : [Colors.white.withValues(alpha: 0.06), const Color(0xFF1A2D3E)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              border: Border.all(
-                color: isWeekPeak
-                    ? _kGold.withValues(alpha: 0.85)
-                    : good
-                        ? accent.withValues(alpha: 0.65)
-                        : Colors.white.withValues(alpha: 0.12),
-                width: isWeekPeak ? 2.2 : 1,
-              ),
-              boxShadow: isWeekPeak
-                  ? [
-                      BoxShadow(
-                        color: _kGold.withValues(alpha: 0.25),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : good
-                      ? [
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : null,
+    return Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              colors: good
+                  ? [accent.withValues(alpha: 0.35), const Color(0xFF1A2D3E)]
+                  : ok
+                      ? [accent.withValues(alpha: 0.22), const Color(0xFF1A2D3E)]
+                      : [Colors.white.withValues(alpha: 0.06), const Color(0xFF1A2D3E)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    SevenDaysSection._weekdayShort(d),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.95),
+            border: Border.all(
+              color: isWeekPeak
+                  ? _kGold.withValues(alpha: 0.85)
+                  : good
+                      ? accent.withValues(alpha: 0.65)
+                      : Colors.white.withValues(alpha: 0.12),
+              width: isWeekPeak ? 2.0 : 1,
+            ),
+            boxShadow: isWeekPeak
+                ? [
+                    BoxShadow(
+                      color: _kGold.withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
+                  ]
+                : good
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  SevenDaysSection._weekdayShort(d),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.95),
                   ),
-                  Text(
-                    SevenDaysSection._ddMm(d),
-                    style: const TextStyle(color: _kMuted, fontSize: 11),
+                ),
+                Text(
+                  SevenDaysSection._ddMm(d),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _kMuted, fontSize: 11),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${row.go.score}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    height: 1,
+                    color: accent,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${row.go.score}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 26,
-                      height: 1,
-                      color: accent,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    row.go.verdict,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: accent.withValues(alpha: 0.95)),
-                  ),
-                  const Spacer(),
-                  if (row.tide?.isGolden == true)
-                    Container(
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  row.go.verdict,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: accent.withValues(alpha: 0.95)),
+                ),
+                const Spacer(),
+                if (row.tide?.isGolden == true)
+                  Align(
+                    child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: _kGold.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text('Triều vàng', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _kGold)),
-                    )
-                  else
-                    const SizedBox(height: 18),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 18),
+              ],
+            ),
+          ),
+        ),
+        if (isWeekPeak && row.go.score >= 50)
+          Positioned(
+            top: -6,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: _kGold,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 6)],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xFF0D1B2A)),
+                  SizedBox(width: 3),
+                  Text('Tuần này', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0D1B2A))),
                 ],
               ),
             ),
           ),
-          if (isWeekPeak && row.go.score >= 50)
-            Positioned(
-              top: -6,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kGold,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 6)],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xFF0D1B2A)),
-                    SizedBox(width: 3),
-                    Text('Tuần này', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0D1B2A))),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -255,15 +277,15 @@ class _LegendRow extends StatelessWidget {
       spacing: 12,
       runSpacing: 8,
       children: [
-        _LegendDot(color: const Color(0xFF2ECC71), label: '≥70 Đẹp để đi'),
-        _LegendDot(color: const Color(0xFFF2C94C), label: '45–69 Cân nhắc'),
-        _LegendDot(color: const Color(0xFFE74C3C), label: '<45 Khó khăn hơn'),
+        _LegendDot(color: const Color(0xFF2ECC71), label: 'Từ 70 · Nên đi'),
+        _LegendDot(color: const Color(0xFFF2C94C), label: '45–69 · Cân nhắc'),
+        _LegendDot(color: const Color(0xFFE74C3C), label: 'Dưới 45 · Không nên'),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.auto_awesome_rounded, size: 14, color: _kGold.withValues(alpha: 0.9)),
             const SizedBox(width: 4),
-            const Text('Viền vàng = ngày điểm cao nhất trong 7 ngày', style: TextStyle(color: _kMuted, fontSize: 11)),
+            const Text('Viền vàng · Điểm cao nhất 7 ngày', style: TextStyle(color: _kMuted, fontSize: 11)),
           ],
         ),
       ],

@@ -117,7 +117,6 @@ export class BookingsService {
       dto,
     );
     const qty = dto.quantity ?? 1;
-    const totalPrice = service.price * qty;
 
     if (hasRooms) {
       if (qty !== 1) {
@@ -167,6 +166,10 @@ export class BookingsService {
         roomId = free[Math.floor(Math.random() * free.length)].id;
       }
 
+      const assignedRoom = service.rooms.find((r) => r.id === roomId);
+      const totalPrice =
+        (assignedRoom?.pricePerNight ?? service.price) * qty;
+
       const booking = await this.prisma.booking.create({
         data: {
           userId,
@@ -185,6 +188,8 @@ export class BookingsService {
       });
       return { bookingGroupId: null as string | null, bookings: [booking] };
     }
+
+    const totalPrice = service.price * qty;
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -259,7 +264,13 @@ export class BookingsService {
     }
 
     const groupId = randomUUID();
-    const unitPrice = service.price;
+    const nightPriceForRoom = (roomId: string) => {
+      const room = service.rooms.find((x) => x.id === roomId);
+      if (!room) {
+        throw new BadRequestException('Phòng không thuộc cơ sở này.');
+      }
+      return room.pricePerNight ?? service.price;
+    };
 
     return this.prisma.$transaction(async (tx) => {
       const created: Awaited<ReturnType<typeof tx.booking.create>>[] = [];
@@ -274,7 +285,7 @@ export class BookingsService {
               serviceId: service.id,
               date: day,
               quantity: 1,
-              totalPrice: unitPrice,
+              totalPrice: nightPriceForRoom(roomId),
               customerName,
               customerPhone: phone,
               customerNote: dto.customerNote,

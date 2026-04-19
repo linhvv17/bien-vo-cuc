@@ -1,263 +1,382 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:bvc_network/bvc_network.dart';
+import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_ui/bvc_ui.dart';
 import '../providers/services_providers.dart';
-import '../widgets/combo_deal_card.dart';
-import '../widgets/service_card.dart';
+import '../../domain/entities/service_item.dart';
 
-class ServicesScreen extends ConsumerWidget {
+class ServicesScreen extends ConsumerStatefulWidget {
   const ServicesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final baseUrl = ref.watch(apiBaseUrlProvider);
+  ConsumerState<ServicesScreen> createState() => _ServicesScreenState();
+}
+
+class _ServicesScreenState extends ConsumerState<ServicesScreen> {
+  String _tab = 'ALL';
+  final _q = TextEditingController();
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hotelsAsync = ref.watch(hotelsProvider);
     final foodAsync = ref.watch(foodProvider);
-    final combosAsync = ref.watch(comboDealsProvider);
 
-    return DefaultTabController(
-      length: 3,
-      child: Stack(
-        children: [
-          const Positioned.fill(child: WavesBackground()),
-          Scaffold(
-            backgroundColor: Colors.transparent,
-            appBar: AppBar(
-              title: const Text('Ăn & Ở'),
-              backgroundColor: Colors.transparent,
-              bottom: const TabBar(
-                tabs: [
-                  Tab(icon: Icon(Icons.hotel_rounded), text: 'Khách sạn'),
-                  Tab(icon: Icon(Icons.restaurant_rounded), text: 'Ăn uống'),
-                  Tab(icon: Icon(Icons.auto_awesome_mosaic_rounded), text: 'Combo'),
-                ],
-              ),
-            ),
-            body: TabBarView(
+    final items = <ServiceItem>[
+      ...hotelsAsync.maybeWhen(data: (v) => v, orElse: () => const <ServiceItem>[]),
+      ...foodAsync.maybeWhen(data: (v) => v, orElse: () => const <ServiceItem>[]),
+    ];
+
+    final q = _q.text.trim().toLowerCase();
+    final filtered = items.where((x) {
+      if (_tab == 'ALL') return true;
+      return x.type == _tab;
+    }).where((x) {
+      if (q.isEmpty) return true;
+      return x.name.toLowerCase().contains(q) || x.description.toLowerCase().contains(q);
+    }).toList(growable: false);
+
+    return Stack(
+      children: [
+        const Positioned.fill(child: WavesBackground()),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Ăn & Ở'),
+            centerTitle: false,
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(hotelsProvider);
+              ref.invalidate(foodProvider);
+              await Future.wait([
+                ref.read(hotelsProvider.future),
+                ref.read(foodProvider.future),
+              ]);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                // Hotels
-                RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(hotelsProvider);
-                    await ref.read(hotelsProvider.future);
-                  },
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      const _CatalogHeader(
-                        title: 'Khách sạn gần biển',
-                        subtitle: 'Ưu tiên: gần điểm gửi xe, tiện xuất phát sớm, có chỗ tắm rửa.',
-                        icon: Icons.hotel_rounded,
-                      ),
-                      const SizedBox(height: 12),
-                      hotelsAsync.when(
-                        loading: () => const _LoadingBlock(),
-                        error: (e, _) => _InlineError(message: '$e', baseUrl: baseUrl, onRetry: () => ref.invalidate(hotelsProvider)),
-                        data: (items) => items.isEmpty
-                            ? const _EmptyHint(text: 'Chưa có dữ liệu khách sạn. (Sẽ nhập từ Admin)')
-                            : Column(
-                                children: items
-                                    .map((e) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 10),
-                                          child: ServiceCard(item: e),
-                                        ))
-                                    .toList(),
-                              ),
-                      ),
-                    ],
-                  ),
+                _SearchBar(
+                  controller: _q,
+                  hint: 'Tìm dịch vụ...',
+                  onChanged: (_) => setState(() {}),
                 ),
-
-                // Food
-                RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(foodProvider);
-                    await ref.read(foodProvider.future);
-                  },
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      const _CatalogHeader(
-                        title: 'Ăn uống',
-                        subtitle: 'Tip: ưu tiên món nóng, gọn, tránh đồ dễ bẩn khi xuống bãi.',
-                        icon: Icons.restaurant_rounded,
-                      ),
-                      const SizedBox(height: 12),
-                      foodAsync.when(
-                        loading: () => const _LoadingBlock(),
-                        error: (e, _) => _InlineError(message: '$e', baseUrl: baseUrl, onRetry: () => ref.invalidate(foodProvider)),
-                        data: (items) => items.isEmpty
-                            ? const _EmptyHint(text: 'Chưa có dữ liệu ăn uống. (Sẽ nhập từ Admin)')
-                            : Column(
-                                children: items
-                                    .map((e) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 10),
-                                          child: ServiceCard(item: e),
-                                        ))
-                                    .toList(),
-                              ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 12),
+                _CategoryRow(
+                  active: _tab,
+                  onChanged: (v) => setState(() => _tab = v),
                 ),
-
-                // Combo
-                RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(comboDealsProvider);
-                    await ref.read(comboDealsProvider.future);
-                  },
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      const _CatalogHeader(
-                        title: 'Combo gợi ý',
-                        subtitle: '1 khách sạn + 1 món ăn để tối ưu đi săn bình minh.',
-                        icon: Icons.auto_awesome_mosaic_rounded,
-                      ),
-                      const SizedBox(height: 12),
-                      combosAsync.when(
-                        loading: () => const _LoadingBlock(),
-                        error: (e, _) => _InlineError(message: '$e', baseUrl: baseUrl, onRetry: () => ref.invalidate(comboDealsProvider)),
-                        data: (items) => items.isEmpty
-                            ? const _EmptyHint(text: 'Chưa có combo để gợi ý.')
-                            : Column(
-                                children: items
-                                    .map((c) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 10),
-                                          child: ComboDealCard(combo: c),
-                                        ))
-                                    .toList(),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 14),
+                if (hotelsAsync.isLoading || foodAsync.isLoading)
+                  const _ServicesSkeleton()
+                else if (hotelsAsync.hasError || foodAsync.hasError)
+                  _ErrorState(
+                    title: 'Hệ thống đang bận',
+                    description: 'Chúng tôi đang xử lý, vui lòng thử lại sau ít phút.',
+                    onRetry: () {
+                      ref.invalidate(hotelsProvider);
+                      ref.invalidate(foodProvider);
+                    },
+                  )
+                else if (filtered.isEmpty)
+                  const _EmptyState(
+                    title: 'Chưa có dữ liệu',
+                    description: 'Dữ liệu sẽ được cập nhật sớm.',
+                  )
+                else
+                  ...filtered.map((s) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ServiceMockCard(item: s),
+                      )),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.controller, required this.hint, required this.onChanged});
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: AppColors.card.withValues(alpha: 0.55),
+        hintStyle: const TextStyle(color: AppColors.mutedForeground),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.base)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.base),
+          borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.55)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.base),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({required this.active, required this.onChanged});
+  final String active;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String value, String label) {
+      final isActive = value == active;
+      return InkWell(
+        onTap: () => onChanged(value),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primary.withValues(alpha: 0.18) : AppColors.card.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            border: Border.all(
+              color: isActive ? AppColors.primary.withValues(alpha: 0.55) : AppColors.border.withValues(alpha: 0.55),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isActive ? AppColors.primary : AppColors.mutedForeground,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip('ALL', 'Tất cả'),
+          const SizedBox(width: 10),
+          chip('FOOD', 'Ẩm thực'),
+          const SizedBox(width: 10),
+          chip('ACCOMMODATION', 'Lưu trú'),
         ],
       ),
     );
   }
 }
 
-class _CatalogHeader extends StatelessWidget {
-  const _CatalogHeader({required this.title, required this.subtitle, required this.icon});
+class _ServiceMockCard extends StatelessWidget {
+  const _ServiceMockCard({required this.item});
+  final ServiceItem item;
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
+  double _rating() {
+    final seed = item.id.hashCode;
+    final r = 4.4 + (seed.abs() % 5) * 0.1; // 4.4 .. 4.8
+    return double.parse(r.toStringAsFixed(1));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            scheme.primary.withValues(alpha: 0.22),
-            const Color(0xFF1A2D3E),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.18)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              height: 44,
-              width: 44,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: scheme.primary.withValues(alpha: 0.18)),
-              ),
-              child: Icon(icon, color: scheme.primary),
+    final cs = Theme.of(context).colorScheme;
+    final accent = item.type == 'ACCOMMODATION' ? AppColors.secondary : cs.primary;
+    final category = item.type == 'ACCOMMODATION' ? 'Lưu trú' : 'Ẩm thực';
+    final unit = item.type == 'ACCOMMODATION' ? '/đêm' : '/người';
+    final tag1 = item.type == 'ACCOMMODATION' ? 'Gần biển' : 'Gần biển';
+    final tag2 = item.type == 'ACCOMMODATION' ? 'Giá tốt' : 'Giá rẻ';
+    final rating = _rating();
+
+    void open() {
+      // Mock detail per screenshot: use booking detail-like screen for FOOD too.
+      context.push('/services/detail/${item.id}', extra: item);
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: open,
+        borderRadius: BorderRadius.circular(AppRadii.x2l),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.x2l),
+            gradient: LinearGradient(
+              colors: [AppColors.card.withValues(alpha: 0.70), AppColors.surface.withValues(alpha: 0.60)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
+            boxShadow: AppShadows.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFA0B4C8), height: 1.25)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(AppRadii.xl),
+                      border: Border.all(color: accent.withValues(alpha: 0.28)),
+                    ),
+                    child: Text(category, style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 12)),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 4),
+                      Text('$rating', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ],
+                  ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(
+                item.description.isEmpty ? 'Dịch vụ tại Biển Vô Cực.' : item.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.mutedForeground, height: 1.25),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(formatVnd(item.price), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
+                  const SizedBox(width: 6),
+                  Text('VND$unit', style: const TextStyle(color: AppColors.mutedForeground, fontSize: 12)),
+                  const Spacer(),
+                  _MiniTag(text: tag1),
+                  const SizedBox(width: 8),
+                  _MiniTag(text: tag2),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _LoadingBlock extends StatelessWidget {
-  const _LoadingBlock();
+class _MiniTag extends StatelessWidget {
+  const _MiniTag({required this.text});
+  final String text;
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: LinearProgressIndicator(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.muted.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground, fontWeight: FontWeight.w700)),
     );
   }
 }
 
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message, required this.baseUrl, required this.onRetry});
-  final String message;
-  final String baseUrl;
+class _ServicesSkeleton extends StatelessWidget {
+  const _ServicesSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    Widget box(double h) => Container(
+          height: h,
+          decoration: BoxDecoration(
+            color: AppColors.muted.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(AppRadii.x2l),
+          ),
+        );
+    return Column(
+      children: [
+        box(110),
+        const SizedBox(height: 12),
+        box(110),
+        const SizedBox(height: 12),
+        box(110),
+      ],
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.title, required this.description, required this.onRetry});
+  final String title;
+  final String description;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.25)),
-        color: Colors.redAccent.withValues(alpha: 0.10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Lỗi tải dữ liệu', style: TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          Text(message, style: const TextStyle(color: Color(0xFFA0B4C8))),
-          const SizedBox(height: 10),
-          Text('API: $baseUrl', style: const TextStyle(color: Color(0xFFA0B4C8), fontSize: 12)),
-          const SizedBox(height: 10),
-          FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Thử lại')),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 72,
+              width: 72,
+              decoration: BoxDecoration(color: AppColors.destructive.withValues(alpha: 0.18), shape: BoxShape.circle),
+              child: const Icon(Icons.error_rounded, color: AppColors.destructive, size: 34),
+            ),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            const SizedBox(height: 8),
+            Text(description, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.mutedForeground, height: 1.3)),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Thử lại')),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.text});
-  final String text;
-
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.title, required this.description});
+  final String title;
+  final String description;
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-        color: Colors.white.withValues(alpha: 0.04),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 72,
+              width: 72,
+              decoration: BoxDecoration(color: AppColors.muted.withValues(alpha: 0.45), shape: BoxShape.circle),
+              child: const Icon(Icons.inbox_rounded, color: AppColors.mutedForeground, size: 34),
+            ),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            const SizedBox(height: 8),
+            Text(description, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.mutedForeground, height: 1.3)),
+          ],
+        ),
       ),
-      child: Text(text, style: const TextStyle(color: Color(0xFFA0B4C8))),
     );
   }
 }

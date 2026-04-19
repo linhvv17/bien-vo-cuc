@@ -16,3 +16,5 @@ dependencies:
   bvc_network:
     path: ../bvc_network
   go_router: ^17.0.0
+  bvc_ui:
+    path: ../bvc_ui

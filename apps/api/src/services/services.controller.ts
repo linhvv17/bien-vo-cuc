@@ -12,6 +12,7 @@ import { ServiceType } from '@prisma/client';
 
 import { apiSuccess } from '../common/response/api-response';
 import { GetServicesQueryDto } from './dto/get-services.dto';
+import { CreateRoomDto, UpdateRoomDto } from './dto/mutate-room.dto';
 import { CreateServiceDto, UpdateServiceDto } from './dto/mutate-service.dto';
 import { ServicesService } from './services.service';
 
@@ -45,6 +46,37 @@ export class ServicesController {
       limit: limit ? Number(limit) : undefined,
     });
     return apiSuccess(data, 'OK', { count: data.length });
+  }
+
+  @Get(':id/rooms')
+  async listRooms(@Param('id') id: string) {
+    const data = await this.services.listRoomsForService(id);
+    return apiSuccess(data, 'OK');
+  }
+
+  @Post(':id/rooms')
+  async createRoom(@Param('id') id: string, @Body() dto: CreateRoomDto) {
+    const created = await this.services.createRoom(id, dto);
+    return apiSuccess(created, 'OK');
+  }
+
+  @Put(':serviceId/rooms/:roomId')
+  async updateRoom(
+    @Param('serviceId') serviceId: string,
+    @Param('roomId') roomId: string,
+    @Body() dto: UpdateRoomDto,
+  ) {
+    const updated = await this.services.updateRoom(serviceId, roomId, dto);
+    return apiSuccess(updated, 'OK');
+  }
+
+  @Delete(':serviceId/rooms/:roomId')
+  async deleteRoom(
+    @Param('serviceId') serviceId: string,
+    @Param('roomId') roomId: string,
+  ) {
+    const deleted = await this.services.softDeleteRoom(serviceId, roomId);
+    return apiSuccess(deleted, 'OK');
   }
 
   @Get(':id/accommodation-detail')

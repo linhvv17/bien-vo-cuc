@@ -58,10 +58,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (_, __) => '/home'),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      // Keep standalone route for deep-links; primary navigation uses shell tab.
       GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
       GoRoute(
         path: '/services/accommodation/:serviceId',
         builder: (_, state) => AccommodationDetailScreen(serviceId: state.pathParameters['serviceId']!),
+      ),
+      GoRoute(
+        path: '/services/detail/:serviceId',
+        builder: (_, state) {
+          final extra = state.extra;
+          final item = extra is ServiceItem ? extra : null;
+          // Fallback: if no item provided, navigate back to list.
+          if (item == null) return const ServicesScreen();
+          return ServiceDetailScreen(item: item);
+        },
       ),
       GoRoute(
         path: '/book/accommodation/:serviceId',
@@ -157,6 +168,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account-tab',
+                builder: (_, __) => const AccountScreen(),
               ),
             ],
           ),

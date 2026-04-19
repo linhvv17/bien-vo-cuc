@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { apiPost, apiUrl } from "@/lib/api";
 
+import { AccommodationRoomsPanel } from "./accommodation-rooms-panel";
+
 type ServiceType = "ACCOMMODATION" | "FOOD" | "TOUR" | "VEHICLE";
 
 export type ServiceItem = {
@@ -28,6 +30,7 @@ export function ServiceEditor({
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [roomPanel, setRoomPanel] = useState<{ id: string; name: string; price: number } | null>(null);
 
   const defaults = useMemo(
     () => ({
@@ -114,7 +117,7 @@ export function ServiceEditor({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs text-zinc-500">
-          Thao tác trực tiếp DB qua Backend API (MVP chưa có Auth).
+          Khách sạn: nhập giá cơ sở + thêm từng phòng (mã, loại, giá/đêm tuỳ chọn). Đặt phòng trên app theo loại phòng & tồn kho.
         </div>
         <button
           onClick={startCreate}
@@ -162,7 +165,17 @@ export function ServiceEditor({
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {type === "ACCOMMODATION" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setRoomPanel({ id: s.id, name: s.name, price: s.price })}
+                        className="rounded-md bg-sky-500/20 px-3 py-1.5 text-xs text-sky-100 hover:bg-sky-500/30 disabled:opacity-50"
+                      >
+                        Phòng
+                      </button>
+                    )}
                     <button
                       disabled={busy}
                       onClick={() => startEdit(s)}
@@ -247,7 +260,7 @@ export function ServiceEditor({
               </Field>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Price (VND)">
+                <Field label={type === "ACCOMMODATION" ? "Giá cơ sở / đêm (VND)" : "Price (VND)"}>
                   <input
                     name="price"
                     type="number"
@@ -268,6 +281,11 @@ export function ServiceEditor({
                   />
                 </Field>
               </div>
+              {type === "ACCOMMODATION" && (
+                <p className="text-xs text-zinc-500">
+                  Giá từng phòng có thể ghi đè trong &quot;Phòng&quot;. Không thêm phòng thì hệ thống vẫn cho đặt 1 đơn vị theo giá cơ sở.
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
@@ -288,6 +306,15 @@ export function ServiceEditor({
             </form>
           </div>
         </div>
+      )}
+
+      {roomPanel && (
+        <AccommodationRoomsPanel
+          serviceId={roomPanel.id}
+          serviceName={roomPanel.name}
+          basePriceVnd={roomPanel.price}
+          onClose={() => setRoomPanel(null)}
+        />
       )}
     </div>
   );

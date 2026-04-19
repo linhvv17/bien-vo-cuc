@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, RoomType, ServiceType } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateRoomDto, UpdateRoomDto } from './dto/mutate-room.dto';
 import { CreateServiceDto, UpdateServiceDto } from './dto/mutate-service.dto';
 import { GUEST_PREFERENCE_OPTIONS } from './guest-preferences';
 
@@ -170,6 +175,8 @@ export class ServicesService {
 
     const day = parseYmdLocal(dateYmd);
 
+    const baseNight = service.price;
+
     const rooms = await Promise.all(
       service.rooms.map(async (r) => {
         const booked = await this.prisma.booking.count({
@@ -180,6 +187,7 @@ export class ServicesService {
           },
         });
         const available = booked === 0;
+        const pricePerNight = r.pricePerNight ?? baseNight;
         return {
           id: r.id,
           code: r.code,
@@ -188,6 +196,7 @@ export class ServicesService {
           maxGuests: r.maxGuests,
           floor: r.floor,
           images: r.images,
+          pricePerNight,
           available,
           availableCount: available ? 1 : 0,
         };
@@ -196,7 +205,12 @@ export class ServicesService {
 
     const byType = new Map<
       RoomType,
-      { availableCount: number; inventory: number; maxGuests: number }
+      {
+        availableCount: number;
+        inventory: number;
+        maxGuests: number;
+        minPrice: number | null;
+      }
     >();
     for (const r of rooms) {
       const rt = r.roomType;
@@ -205,12 +219,15 @@ export class ServicesService {
           availableCount: 0,
           inventory: 0,
           maxGuests: r.maxGuests,
+          minPrice: null,
         });
       }
       const g = byType.get(rt)!;
       g.inventory += 1;
       g.availableCount += r.available ? 1 : 0;
       g.maxGuests = Math.max(g.maxGuests, r.maxGuests);
+      const p = r.pricePerNight;
+      if (g.minPrice == null || p < g.minPrice) g.minPrice = p;
     }
 
     const roomTypeGroups = Array.from(byType.entries()).map(
@@ -220,7 +237,7 @@ export class ServicesService {
         availableCount: s.availableCount,
         inventory: s.inventory,
         maxGuests: s.maxGuests,
-        pricePerNight: service.price,
+        pricePerNight: s.minPrice ?? baseNight,
       }),
     );
 
@@ -247,5 +264,105 @@ export class ServicesService {
       roomTypeGroups,
       preferenceOptions: [...GUEST_PREFERENCE_OPTIONS],
     };
+  }
+
+  private async requireAccommodationService(serviceId: string) {
+    const s = await this.prisma.service.findFirst({
+      where: { id: serviceId, isActive: true, type: ServiceType.ACCOMMODATION },
+    });
+    if (!s) {
+      throw new NotFoundException('Không tìm thấy cơ sở lưu trú hoặc đã tắt.');
+    }
+    return s;
+  }
+
+  async listRoomsForService(serviceId: string) {
+    await this.requireAccommodationService(serviceId);
+    return this.prisma.room.findMany({
+      where: { serviceId },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+    });
+  }
+
+  async createRoom(serviceId: string, dto: CreateRoomDto) {
+    await this.requireAccommodationService(serviceId);
+    try {
+      return await this.prisma.room.create({
+        data: {
+          serviceId,
+          code: dto.code.trim(),
+          name: dto.name.trim(),
+          roomType: dto.roomType,
+          maxGuests: dto.maxGuests,
+          floor: dto.floor,
+          sortOrder: dto.sortOrder ?? 0,
+          pricePerNight:
+            dto.pricePerNight !== undefined ? dto.pricePerNight : null,
+          images: dto.images ?? [],
+        },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          'Mã phòng (code) đã tồn tại trong cơ sở này.',
+        );
+      }
+      throw e;
+    }
+  }
+
+  async updateRoom(serviceId: string, roomId: string, dto: UpdateRoomDto) {
+    await this.requireAccommodationService(serviceId);
+    const existing = await this.prisma.room.findFirst({
+      where: { id: roomId, serviceId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Không tìm thấy phòng.');
+    }
+    try {
+      return await this.prisma.room.update({
+        where: { id: roomId },
+        data: {
+          ...(dto.code !== undefined ? { code: dto.code.trim() } : {}),
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.roomType !== undefined ? { roomType: dto.roomType } : {}),
+          ...(dto.maxGuests !== undefined ? { maxGuests: dto.maxGuests } : {}),
+          ...(dto.floor !== undefined ? { floor: dto.floor } : {}),
+          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          ...(dto.pricePerNight !== undefined
+            ? { pricePerNight: dto.pricePerNight }
+            : {}),
+          ...(dto.images !== undefined ? { images: dto.images } : {}),
+          ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          'Mã phòng (code) đã tồn tại trong cơ sở này.',
+        );
+      }
+      throw e;
+    }
+  }
+
+  async softDeleteRoom(serviceId: string, roomId: string) {
+    await this.requireAccommodationService(serviceId);
+    const existing = await this.prisma.room.findFirst({
+      where: { id: roomId, serviceId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Không tìm thấy phòng.');
+    }
+    return this.prisma.room.update({
+      where: { id: roomId },
+      data: { isActive: false },
+    });
   }
 }
