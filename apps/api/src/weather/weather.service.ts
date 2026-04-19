@@ -21,6 +21,9 @@ export class WeatherService {
     { expiresAtMs: number; value: WeatherForecastDay[] }
   >();
 
+  /** Bản thành công gần nhất (không xóa khi TTL hết) — dùng khi upstream 429 và cache cứng đã expire. */
+  static readonly _lastGood = new Map<string, WeatherForecastDay[]>();
+
   private defaultCoords(): { lat: number; lon: number } {
     const latRaw = this.config.get<string>('BEACH_LAT') ?? '20.5774021';
     const lonRaw = this.config.get<string>('BEACH_LNG') ?? '106.6192557';
@@ -49,9 +52,19 @@ export class WeatherService {
   }
 
   private setCached(lat: number, lon: number, value: WeatherForecastDay[]) {
-    const ttlMs = 10 * 60 * 1000; // 10 minutes
+    const ttlMs = 20 * 60 * 1000; // 20 phút — giảm số lần gọi Open-Meteo (429 hay gặp khi burst / cold start).
     const key = this.cacheKey(lat, lon);
     WeatherService._cache.set(key, { expiresAtMs: Date.now() + ttlMs, value });
+    WeatherService._lastGood.set(key, value);
+  }
+
+  private getLastGood(lat: number, lon: number): WeatherForecastDay[] | null {
+    const key = this.cacheKey(lat, lon);
+    return WeatherService._lastGood.get(key) ?? null;
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise<void>((r) => setTimeout(r, ms));
   }
 
   async getForecast7Days(params?: {
@@ -82,21 +95,37 @@ export class WeatherService {
           'Weather fetch() không khả dụng trên runtime hiện tại. Hãy đảm bảo Render dùng Node >= 18 (hoặc thêm polyfill fetch).',
         );
       }
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 12_000);
-      const res = await f(url, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-          // Some upstreams behave better when a UA is present.
-          'User-Agent': 'bien-vo-cuc-api/1.0 (+https://bienvocuc.vn)',
-        },
-      }).finally(() => clearTimeout(t));
+
+      const doFetch = () => {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 12_000);
+        return f(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'bien-vo-cuc-api/1.0 (+https://bienvocuc.vn)',
+          },
+        }).finally(() => clearTimeout(t));
+      };
+
+      let res = await doFetch();
+
+      // Open-Meteo 429: chờ rồi thử lại 1–2 lần; sau đó trả cache cứng hoặc last-good.
+      if (res.status === 429) {
+        await this.sleep(900);
+        res = await doFetch();
+      }
+      if (res.status === 429) {
+        await this.sleep(1800);
+        res = await doFetch();
+      }
+
       if (!res.ok) {
         if (res.status === 429) {
-          // If upstream rate-limits us, try to serve stale-ish data.
           const stale = this.getCached(lat, lon);
           if (stale != null) return stale;
+          const lastGood = this.getLastGood(lat, lon);
+          if (lastGood != null) return lastGood;
           throw new HttpException(
             'Weather upstream đang giới hạn (429). Vui lòng thử lại sau.',
             HttpStatus.TOO_MANY_REQUESTS,
