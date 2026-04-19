@@ -1,4 +1,4 @@
-/// Truyền qua [GoRouterState.extra] khi vào màn đặt phòng từ chi tiết.
+/// Truyền qua tham số [arguments] của [Modular.to.pushNamed] khi vào màn đặt phòng từ chi tiết.
 class AccommodationBookingArgs {
   const AccommodationBookingArgs({this.roomLines});
 

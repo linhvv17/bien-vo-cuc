@@ -15,6 +15,6 @@ dependencies:
   dio: ^5.9.2
   bvc_network:
     path: ../bvc_network
-  go_router: ^17.0.0
+  flutter_modular: ^6.4.1
   bvc_ui:
     path: ../bvc_ui

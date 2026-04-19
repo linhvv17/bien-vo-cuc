@@ -35,8 +35,9 @@ final Provider<Dio> _appDioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
       baseUrl: base,
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 12),
+      // API chậm / ngrok / cold start dễ vượt 12s → receive timeout; tăng nhẹ cho môi trường dev & mạng yếu.
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
       headers: const <String, dynamic>{'Accept': 'application/json'},
     ),
   );
@@ -48,12 +49,18 @@ final Provider<Dio> _appDioProvider = Provider<Dio>((ref) {
           options.headers.remove('Authorization');
           return handler.next(options);
         }
+        // Không `await authSessionProvider.future` không giới hạn: nếu session kẹt Loading
+        // (lỗi init / vòng phụ thuộc), mọi request kẹt trước khi gửi → UI xoay vô hạn.
         String? token;
-        try {
-          final session = await ref.read(authSessionProvider.future);
-          token = session?.accessToken;
-        } catch (_) {
-          token = null;
+        final auth = ref.read(authSessionProvider);
+        if (auth.hasValue) {
+          token = auth.value?.accessToken;
+        } else {
+          try {
+            token = (await ref.read(authSessionProvider.future).timeout(const Duration(seconds: 4)))?.accessToken;
+          } catch (_) {
+            token = null;
+          }
         }
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
@@ -63,6 +70,19 @@ final Provider<Dio> _appDioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onError: (DioException err, ErrorInterceptorHandler handler) async {
+        // Tránh “sập” app khi API / proxy trả 429 (Too Many Requests): retry GET một lần sau backoff.
+        if (err.response?.statusCode == 429 &&
+            err.requestOptions.method.toUpperCase() == 'GET' &&
+            err.requestOptions.extra['retry429'] != true) {
+          await Future<void>.delayed(const Duration(milliseconds: 900));
+          err.requestOptions.extra['retry429'] = true;
+          try {
+            final response = await dio.fetch(err.requestOptions);
+            return handler.resolve(response);
+          } on DioException catch (e) {
+            return handler.next(e);
+          }
+        }
         if (err.response?.statusCode != 401) {
           return handler.next(err);
         }

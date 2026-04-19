@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_network/bvc_network.dart';
@@ -100,7 +100,7 @@ class HomeScreen extends ConsumerWidget {
                                 child: _QuickSquare(
                                   icon: Icons.restaurant_rounded,
                                   label: 'Ăn & Ở',
-                                  onTap: () => context.go('/services'),
+                                  onTap: () => ref.read(shellTabIndexProvider.notifier).setTab(1),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -108,7 +108,10 @@ class HomeScreen extends ConsumerWidget {
                                 child: _QuickSquare(
                                   icon: Icons.directions_car_rounded,
                                   label: 'Xe xích',
-                                  onTap: () => context.go('/book/vehicle'),
+                                  onTap: () {
+                                    ref.read(shellTabIndexProvider.notifier).setTab(2);
+                                    Modular.to.pushNamed('/book/vehicle');
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -116,7 +119,10 @@ class HomeScreen extends ConsumerWidget {
                                 child: _QuickSquare(
                                   icon: Icons.photo_camera_rounded,
                                   label: 'Chụp ảnh',
-                                  onTap: () => context.go('/book/photo'),
+                                  onTap: () {
+                                    ref.read(shellTabIndexProvider.notifier).setTab(2);
+                                    Modular.to.pushNamed('/book/photo');
+                                  },
                                 ),
                               ),
                             ],

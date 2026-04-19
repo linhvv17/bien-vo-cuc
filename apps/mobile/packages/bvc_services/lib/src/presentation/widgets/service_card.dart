@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -41,18 +41,20 @@ class ServiceCard extends StatelessWidget {
 
     void openPrimaryDetail() {
       if (item.type == 'ACCOMMODATION') {
-        context.push('/services/accommodation/${item.id}');
+        Modular.to.pushNamed('/services/accommodation/${item.id}');
         return;
       }
       if (item.type == 'FOOD') {
-        final qs = Uri(
-          queryParameters: <String, String>{
-            'title': 'Đặt: ${item.name}',
-            'type': item.type,
-            'name': item.name,
-          },
-        ).query;
-        context.push('/book/service/${item.id}?$qs');
+        Modular.to.pushNamed(
+          Uri(
+            path: '/book/service/${item.id}',
+            queryParameters: <String, String>{
+              'title': 'Đặt: ${item.name}',
+              'type': item.type,
+              'name': item.name,
+            },
+          ).toString(),
+        );
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,7 +244,7 @@ class ServiceCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         if (item.type == 'ACCOMMODATION') {
-                          context.push('/services/accommodation/${item.id}');
+                          Modular.to.pushNamed('/services/accommodation/${item.id}');
                           return;
                         }
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -259,17 +261,19 @@ class ServiceCard extends StatelessWidget {
                       onPressed: () {
                         if (item.type == 'ACCOMMODATION') {
                           final d = ymd(DateTime.now().add(const Duration(days: 1)));
-                          context.push('/book/accommodation/${item.id}?date=$d');
+                          Modular.to.pushNamed('/book/accommodation/${item.id}?date=$d');
                           return;
                         }
-                        final qs = Uri(
-                          queryParameters: <String, String>{
-                            'title': 'Đặt: ${item.name}',
-                            'type': item.type,
-                            'name': item.name,
-                          },
-                        ).query;
-                        context.push('/book/service/${item.id}?$qs');
+                        Modular.to.pushNamed(
+                          Uri(
+                            path: '/book/service/${item.id}',
+                            queryParameters: <String, String>{
+                              'title': 'Đặt: ${item.name}',
+                              'type': item.type,
+                              'name': item.name,
+                            },
+                          ).toString(),
+                        );
                       },
                       icon: const Icon(Icons.arrow_forward),
                       label: Text(item.type == 'ACCOMMODATION' ? 'Đặt phòng' : 'Đặt chỗ'),

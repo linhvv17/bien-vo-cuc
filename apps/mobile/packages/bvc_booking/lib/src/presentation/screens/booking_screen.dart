@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_services/bvc_services.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -156,7 +154,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
-                          onPressed: () => context.go('/services'),
+                          onPressed: () => ref.read(shellTabIndexProvider.notifier).setTab(1),
                           icon: const Icon(Icons.open_in_new_rounded, size: 18),
                           label: const Text('Mở danh sách lưu trú'),
                           style: TextButton.styleFrom(foregroundColor: AppColors.secondary),

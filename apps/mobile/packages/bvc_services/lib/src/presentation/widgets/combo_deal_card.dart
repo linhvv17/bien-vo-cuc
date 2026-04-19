@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import '../../domain/entities/combo_deal.dart';
@@ -90,7 +90,7 @@ class ComboDealCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed: () => context.push('/book/combo/${combo.id}'),
+                  onPressed: () => Modular.to.pushNamed('/book/combo/${combo.id}'),
                   icon: const Icon(Icons.shopping_bag_outlined),
                   label: const Text('Chọn combo'),
                 ),

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_network/bvc_network.dart';
 import '../domain/entities/home_data.dart';
@@ -28,13 +30,13 @@ class HomeRepositoryImpl implements HomeRepository {
     final ymdFrom = ymdToday;
     final ymdTo = ymdAddCalendarDays(ymdToday, 6);
 
-    final tideTodayFut =
+    Future<Response<dynamic>> tideTodayFut =
         _network.get<Map<String, dynamic>>('/tides', queryParameters: {'date': ymdToday});
-    final tideRangeFut = _network.get<Map<String, dynamic>>(
+    Future<Response<dynamic>> tideRangeFut = _network.get<Map<String, dynamic>>(
       '/tides/range',
       queryParameters: {'from': ymdFrom, 'to': ymdTo},
     );
-    final goldenFut = _network.get<Map<String, dynamic>>(
+    Future<Response<dynamic>> goldenFut = _network.get<Map<String, dynamic>>(
       '/tides/golden-hours',
       queryParameters: {'from': ymdFrom, 'to': ymdTo},
     );
@@ -43,11 +45,23 @@ class HomeRepositoryImpl implements HomeRepository {
       queryParameters: {'lat': kBeachLat, 'lon': kBeachLng},
     );
 
+    // Từng API triều độc lập: 429 / lỗi một nguồn không làm “Unhandled” cả màn Home.
+    Future<Response<dynamic>?> safeTide(Future<Response<dynamic>> f) async {
+      try {
+        return await f;
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 429) return null;
+        rethrow;
+      }
+    }
+
     // Weather có thể bị upstream rate-limit (429). Không nên làm "sập" toàn Home;
     // vẫn render triều/golden-hours, còn weather để rỗng và có thể refresh sau.
-    final results = await Future.wait(
-      [tideTodayFut, tideRangeFut, goldenFut],
-    );
+    final results = await Future.wait([
+      safeTide(tideTodayFut),
+      safeTide(tideRangeFut),
+      safeTide(goldenFut),
+    ]);
     Map<String, dynamic>? weatherRaw;
     try {
       final w = await weatherFut;
@@ -57,13 +71,16 @@ class HomeRepositoryImpl implements HomeRepository {
     }
 
     TideSchedule? todayParsed;
-    final r0 = results[0].data;
-    if (r0 is Map<String, dynamic>) {
-      final body = parseApiResponse<TideSchedule?>(
-        r0,
-        (data) => data == null ? null : TideSchedule.fromJson((data as Map).cast<String, dynamic>()),
-      );
-      todayParsed = body.data;
+    final res0 = results[0];
+    if (res0 != null) {
+      final r0 = res0.data;
+      if (r0 is Map<String, dynamic>) {
+        final body = parseApiResponse<TideSchedule?>(
+          r0,
+          (data) => data == null ? null : TideSchedule.fromJson((data as Map).cast<String, dynamic>()),
+        );
+        todayParsed = body.data;
+      }
     }
 
     List<TideSchedule> parseTideList(dynamic raw) {
@@ -90,8 +107,8 @@ class HomeRepositoryImpl implements HomeRepository {
 
     return HomeData(
       todayTide: todayParsed,
-      tides7: parseTideList(results[1].data),
-      golden7: parseTideList(results[2].data),
+      tides7: parseTideList(results[1]?.data),
+      golden7: parseTideList(results[2]?.data),
       weather7: parseWeatherList(weatherRaw),
     );
   }

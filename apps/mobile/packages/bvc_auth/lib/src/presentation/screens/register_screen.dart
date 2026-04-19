@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_network/bvc_network.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -88,7 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         await CredentialStore.clear();
       }
       if (!mounted) return;
-      context.go('/home');
+      Modular.to.navigate('/main');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = formatDioError(e));
@@ -232,7 +232,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => Modular.to.pop(),
                     child: Text(
                       'Đã có tài khoản? Quay lại đăng nhập',
                       style: TextStyle(color: AppColors.goldGlow.withValues(alpha: 0.92)),

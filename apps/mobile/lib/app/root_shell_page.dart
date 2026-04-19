@@ -1,18 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
+import 'package:bvc_auth/bvc_auth.dart';
+import 'package:bvc_booking/bvc_booking.dart';
+import 'package:bvc_home/bvc_home.dart';
+import 'package:bvc_services/bvc_services.dart';
 import 'package:bvc_ui/bvc_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class RootShell extends StatelessWidget {
-  const RootShell({super.key, required this.navigationShell});
-
-  final StatefulNavigationShell navigationShell;
+/// Shell bottom bar + [IndexedStack] — một [Navigator] gốc (Modular), tránh xung đột Page key của go_router shell.
+class RootShellPage extends ConsumerWidget {
+  const RootShellPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(shellTabIndexProvider);
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: navigationShell,
+      body: IndexedStack(
+        index: index,
+        children: const [
+          HomeScreen(),
+          ServicesScreen(),
+          BookingScreen(),
+          AccountScreen(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.card.withValues(alpha: 0.95),
@@ -43,8 +54,8 @@ class RootShell extends StatelessWidget {
               }),
             ),
             child: NavigationBar(
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: (index) => navigationShell.goBranch(index, initialLocation: true),
+              selectedIndex: index,
+              onDestinationSelected: (i) => ref.read(shellTabIndexProvider.notifier).setTab(i),
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Trang chủ'),
                 NavigationDestination(icon: Icon(Icons.restaurant_rounded), label: 'Ăn & Ở'),

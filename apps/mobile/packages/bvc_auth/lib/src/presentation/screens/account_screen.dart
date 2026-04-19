@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import '../../auth_providers.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -46,7 +46,7 @@ class AccountScreen extends ConsumerWidget {
                   icon: Icons.receipt_long_rounded,
                   title: 'Lịch sử đặt dịch vụ',
                   subtitle: 'Xem danh sách đơn của bạn',
-                  onTap: () => context.go('/book/mine'),
+                  onTap: () => Modular.to.pushNamed('/book/mine'),
                 ),
                 const SizedBox(height: 14),
                 _MenuTile(
@@ -81,7 +81,7 @@ class AccountScreen extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: () async {
                       await ref.read(authSessionProvider.notifier).signOut();
-                      if (context.mounted) context.go('/login');
+                      if (context.mounted) Modular.to.navigate('/login');
                     },
                     icon: const Icon(Icons.logout_rounded, color: AppColors.destructive),
                     label: const Text('Đăng xuất', style: TextStyle(color: AppColors.destructive, fontWeight: FontWeight.w800)),

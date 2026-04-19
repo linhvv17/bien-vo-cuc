@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_network/bvc_network.dart';
@@ -168,7 +168,7 @@ class _AccommodationBookingScreenState extends ConsumerState<AccommodationBookin
       await repo.createBooking(body);
       if (!mounted) return;
       messenger.showSnackBar(const SnackBar(content: Text('Đã gửi đặt phòng.')));
-      context.pop();
+      Modular.to.pop();
     } on DioException catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(formatDioError(e))));

@@ -1,21 +1,17 @@
 import 'package:bvc_ui/bvc_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
-import 'router.dart';
-
-class App extends ConsumerWidget {
+class App extends StatelessWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Biển Vô Cực',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      // Tăng nhẹ cỡ chữ toàn app (kể cả Text có fontSize cố định); vẫn nhân với text scale của hệ thống.
       builder: (context, child) {
         if (child == null) return const SizedBox.shrink();
         final mq = MediaQuery.of(context);
@@ -37,8 +33,7 @@ class App extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      routerConfig: router,
+      routerConfig: Modular.routerConfig,
     );
   }
 }
-

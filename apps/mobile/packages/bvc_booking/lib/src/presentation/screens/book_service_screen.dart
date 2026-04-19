@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_network/bvc_network.dart';
@@ -324,7 +324,8 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                     const SizedBox(height: 20),
                     if (exists) ...[
                       FilledButton(
-                        onPressed: () => context.push('/book/accommodation/$id?date=${Uri.encodeComponent(_dateYmd)}'),
+                        onPressed: () =>
+                            Modular.to.pushNamed('/book/accommodation/$id?date=${Uri.encodeComponent(_dateYmd)}'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
                           backgroundColor: _accent,
@@ -335,7 +336,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: () => context.push('/services/accommodation/$id'),
+                        onPressed: () => Modular.to.pushNamed('/services/accommodation/$id'),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                           foregroundColor: _accent,
@@ -371,7 +372,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => context.push('/services/accommodation/${s.id}'),
+                          onTap: () => Modular.to.pushNamed('/services/accommodation/${s.id}'),
                           borderRadius: BorderRadius.circular(20),
                           child: Ink(
                             padding: const EdgeInsets.all(16),

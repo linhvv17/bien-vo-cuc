@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -206,7 +206,7 @@ class _ServiceMockCard extends StatelessWidget {
 
     void open() {
       // Mock detail per screenshot: use booking detail-like screen for FOOD too.
-      context.push('/services/detail/${item.id}', extra: item);
+      Modular.to.pushNamed('/services/detail/${item.id}', arguments: item);
     }
 
     return Material(

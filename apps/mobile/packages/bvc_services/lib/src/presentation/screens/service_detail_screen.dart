@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -29,7 +29,7 @@ class ServiceDetailScreen extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      onPressed: () => context.pop(),
+                      onPressed: () => Modular.to.pop(),
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
                   ),
@@ -129,14 +129,16 @@ class ServiceDetailScreen extends StatelessWidget {
                     width: 150,
                     child: FilledButton(
                       onPressed: () {
-                        final qs = Uri(
-                          queryParameters: <String, String>{
-                            'title': 'Đặt: ${item.name}',
-                            'type': item.type,
-                            'name': item.name,
-                          },
-                        ).query;
-                        context.push('/book/service/${item.id}?$qs');
+                        Modular.to.pushNamed(
+                          Uri(
+                            path: '/book/service/${item.id}',
+                            queryParameters: <String, String>{
+                              'title': 'Đặt: ${item.name}',
+                              'type': item.type,
+                              'name': item.name,
+                            },
+                          ).toString(),
+                        );
                       },
                       child: const Text('Đặt ngay'),
                     ),

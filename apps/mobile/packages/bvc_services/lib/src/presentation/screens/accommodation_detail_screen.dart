@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_common/bvc_common.dart';
 import 'package:bvc_ui/bvc_ui.dart';
@@ -143,7 +143,7 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
                                 final q = _qtyByType[g.roomType] ?? 0;
                                 if (q > 0) lines[g.roomType] = q;
                               }
-                              context.push(
+                              Modular.to.pushNamed(
                                 Uri(
                                   path: '/book/accommodation/${widget.serviceId}',
                                   queryParameters: {
@@ -152,7 +152,7 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
                                       'rl': lines.entries.map((e) => '${e.key}:${e.value}').join(','),
                                   },
                                 ).toString(),
-                                extra: AccommodationBookingArgs(roomLines: lines),
+                                arguments: AccommodationBookingArgs(roomLines: lines),
                               );
                             },
                       style: FilledButton.styleFrom(

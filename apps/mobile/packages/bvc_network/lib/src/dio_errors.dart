@@ -15,6 +15,11 @@ String formatDioError(Object e) {
       }
     }
 
+    final code = e.response?.statusCode;
+    if (code == 429) {
+      return 'Máy chủ đang giới hạn tần suất (429). Đợi vài giây rồi tải lại.';
+    }
+
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

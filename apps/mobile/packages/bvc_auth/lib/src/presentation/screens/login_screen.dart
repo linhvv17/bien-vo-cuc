@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import 'package:bvc_network/bvc_network.dart';
 import 'package:bvc_ui/bvc_ui.dart';
 
 import '../../auth_providers.dart';
+import '../../auth_repository.dart';
 import '../../credential_store.dart';
 import '../../phone_password_validation.dart';
 import '../widgets/coastal_auth_layout.dart';
@@ -84,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authSessionProvider.notifier).login(phone: normalized, password: _password.text);
       await _persistCredentialsIfNeeded(normalized, _password.text);
       if (!mounted) return;
-      context.go('/home');
+      Modular.to.navigate('/main');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = formatDioError(e));
@@ -108,6 +109,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(authSessionProvider);
+
+    ref.listen<AsyncValue<AuthSession?>>(authSessionProvider, (prev, next) {
+      next.whenData((s) {
+        if (s == null) return;
+        if (!context.mounted) return;
+        final p = Modular.to.path;
+        if (p != '/login' && p != '/register') return;
+        Modular.to.navigate('/main');
+      });
+    });
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -242,7 +253,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton(
-                    onPressed: () => context.push('/register'),
+                    onPressed: () => Modular.to.pushNamed('/register'),
                     child: Text(
                       'Chưa có tài khoản? Đăng ký',
                       style: TextStyle(color: AppColors.goldGlow.withValues(alpha: 0.92)),
